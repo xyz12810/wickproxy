@@ -8,6 +8,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type userConfig struct {
+	Username string
+	Password string
+	Quato    int
+}
+
 type globalConfig struct {
 	Server string
 
@@ -19,15 +25,11 @@ type globalConfig struct {
 		CertificateKey string
 	}
 
-	Users []struct {
-		Username string
-		Password string
-		Quato    int
-	}
+	Users []userConfig
 }
 
 // GlobalConfig is global configuration
-var GlobalConfig globalConfig
+var GlobalConfig globalConfig = globalConfig{Users: make([]userConfig, 0)}
 
 func configReader(configFile string) error {
 	file, err := os.Open(configFile)
