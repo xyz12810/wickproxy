@@ -130,6 +130,25 @@ func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 
 	var err error
 
+	// step 1: check acl
+	hostPort := req.URL.Host
+	Port := req.URL.Port()
+	if Port == "" {
+		if req.URL.Scheme == "http" {
+			hostPort = net.JoinHostPort(hostPort, "80")
+		} else {
+			hostPort = net.JoinHostPort(hostPort, "443")
+		}
+	}
+	tmpHost, tmpPort, err := net.SplitHostPort(hostPort)
+	if err == nil {
+		if !aclCheck(tmpHost, tmpPort) {
+			errorHandle(w, req, http.StatusBadGateway, err)
+			return
+		}
+	}
+
+	// step 2: build request
 	transport := http.DefaultTransport
 	outReq := new(http.Request)
 	outReq = req.Clone(req.Context())

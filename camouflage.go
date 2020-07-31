@@ -46,6 +46,7 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 	outReq = req.Clone(req.Context())
 	*outReq.URL = *target
 	outReq.Host = target.Host
+	outReq.URL.User = req.URL.User
 
 	log.Debugln("[reverse] reverse proxy to:", outReq.URL.Scheme, outReq.URL.Host)
 	if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
