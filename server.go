@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -47,12 +48,6 @@ func serverHandle() {
 
 func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 
-	// Check method == CONNECT
-	if req.Method != http.MethodConnect {
-		errorHandle(w, req, http.StatusNotFound, errors.New("Method not allowed"))
-		return
-	}
-
 	// Authenticate
 	ret, emptyAuth, username := authenticate(w, req)
 	if emptyAuth {
@@ -72,7 +67,17 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 
 	// Authenticate Failed
 	if ret == false {
-		errorHandle(w, req, http.StatusForbidden, errors.New("Authenticate Failed"))
+		hostport := req.URL.Host
+		host, _, err := net.SplitHostPort(hostport)
+		if err != nil {
+			host = hostport
+		}
+		
+		if GlobalConfig.SecureURL == "" || (GlobalConfig.SecureURL == host) {
+			errorHandle(w, req, http.StatusForbidden, errors.New("Authenticate Failed"))
+			return
+		}
+		errorHandle(w, req, http.StatusNotFound, errors.New("Authenticate Failed"))
 		return
 	}
 
@@ -89,8 +94,70 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// start to proxy
-	log.Infoln("[transfer] user", username, ":", req.Method, req.URL)
+	log.Infoln("[transfer] user["+username+"]", req.Method, req.Host, req.URL)
 
+	// For http proxy
+	if req.Method != http.MethodConnect {
+		httpProxyHandler(w, req)
+		return
+	}
+
+	// For http(s)(2) proxy
+	httpsProxyHandle(w, req)
+	return
+}
+
+func authenticate(w http.ResponseWriter, req *http.Request) (ret, emptyAuth bool, username string) {
+	if len(GlobalConfig.Users) == 0 {
+		return true, false, ""
+	}
+
+	reqUsername, reqPassword, ok := proxyAuth(req)
+	if !ok {
+		return false, true, ""
+	}
+
+	for _, u := range GlobalConfig.Users {
+		if u.Username == reqUsername && u.Password == reqPassword {
+			return true, false, reqUsername
+		}
+	}
+	return false, false, ""
+}
+
+// handle HTTP Proxy
+func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
+
+	var err error
+
+	transport := http.DefaultTransport
+	outReq := new(http.Request)
+	outReq = req.Clone(req.Context())
+
+	if outReq.URL.Scheme == "" {
+		outReq.URL.Scheme = "http"
+	}
+
+	outReq.Host = outReq.URL.Host
+
+	res, err := transport.RoundTrip(outReq)
+	if err != nil {
+		errorHandle(w, req, http.StatusNotFound, err)
+		return
+	}
+
+	for key, value := range res.Header {
+		for _, v := range value {
+			w.Header().Add(key, v)
+		}
+	}
+
+	w.WriteHeader(res.StatusCode)
+	io.Copy(w, res.Body)
+	res.Body.Close()
+}
+
+func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
 	hostPort := req.URL.Host
 	Port := req.URL.Port()
 	if Port == "" {
@@ -163,24 +230,4 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 		error500Handle(w, req, errors.New("HTTP version not supported"))
 		return
 	}
-
-	return
-}
-
-func authenticate(w http.ResponseWriter, req *http.Request) (ret, emptyAuth bool, username string) {
-	if len(GlobalConfig.Users) == 0 {
-		return true, true, ""
-	}
-
-	reqUsername, reqPassword, ok := proxyAuth(req)
-	if !ok {
-		return false, true, ""
-	}
-
-	for _, u := range GlobalConfig.Users {
-		if u.Username == reqUsername && u.Password == reqPassword {
-			return true, false, reqUsername
-		}
-	}
-	return false, false, ""
 }

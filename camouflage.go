@@ -33,9 +33,9 @@ func error500Handle(w http.ResponseWriter, req *http.Request, err error) {
 
 func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 
-	log.Infoln("[reverse] proxy to", GlobalConfig.ReverseURL)
+	log.Infoln("[reverse] proxy to", GlobalConfig.FailbackURL)
 	var err error
-	target, err := url.Parse(GlobalConfig.ReverseURL)
+	target, err := url.Parse(GlobalConfig.FailbackURL)
 	if err != nil {
 		log.Errorln("[reverse] url parse error:", err)
 		return
@@ -79,7 +79,7 @@ func errorHandle(w http.ResponseWriter, req *http.Request, code int, err error) 
 	}
 
 	log.Errorln("[server] error:", code, err)
-	if GlobalConfig.ReverseURL != "" {
+	if GlobalConfig.FailbackURL != "" {
 		reverseProxyHandler(w, req)
 		return
 	}
@@ -104,7 +104,7 @@ func errorPassHandle(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("content-type", "text/html")
 
 	code := http.StatusOK
-	fb := fmt.Sprintf(fakeBody, code, "Authenticate Successful", code, "Authenticate Successful", fakeServer)
+	fb := fmt.Sprintf(fakeBody, code, "Authenticate Successful", code, "Congratulations, you are successfully authenticated to the proxy! Go browse all the things!", fakeServer)
 
 	w.WriteHeader(code)
 	w.Write([]byte(fb))

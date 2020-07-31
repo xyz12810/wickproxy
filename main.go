@@ -120,8 +120,8 @@ func setHandle() {
 		GlobalConfig.Timeout = time.Duration(t)
 	case "secure_url":
 		GlobalConfig.SecureURL = *setValue
-	case "reverse_url":
-		GlobalConfig.ReverseURL = *setValue
+	case "fallback_url":
+		GlobalConfig.FailbackURL = *setValue
 	case "cert":
 		GlobalConfig.TLS.Certificate = *setValue
 	case "key":

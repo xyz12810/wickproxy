@@ -17,7 +17,7 @@ type globalConfig struct {
 	Server string
 
 	SecureURL  string
-	ReverseURL string
+	FailbackURL string
 
 	Timeout time.Duration
 
