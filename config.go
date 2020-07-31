@@ -25,7 +25,7 @@ type globalConfig struct {
 	Server string
 
 	SecureURL   string
-	FailbackURL string
+	FallbackURL string
 
 	Timeout time.Duration
 
@@ -41,7 +41,7 @@ type globalConfig struct {
 // GlobalConfig is global configuration
 var GlobalConfig globalConfig = globalConfig{
 	Server:  "0.0.0.0:7890",
-	Timeout: 10 * time.Second,
+	Timeout: 10,
 	Users:   make([]userConfig, 0),
 	ACL:     make([]aclConfig, 0)}
 

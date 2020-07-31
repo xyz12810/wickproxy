@@ -74,7 +74,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 		}
 
 		if GlobalConfig.SecureURL == "" || (GlobalConfig.SecureURL == host) {
-			errorHandle(w, req, http.StatusForbidden, errors.New("Authenticate Failed"))
+			error403Handle(w, req, errors.New("Authenticate Failed"))
 			return
 		}
 		errorHandle(w, req, http.StatusNotFound, errors.New("Authenticate Failed"))
@@ -82,7 +82,15 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// visit secureURL
-	if GlobalConfig.SecureURL != "" && GlobalConfig.SecureURL == req.URL.Host {
+	host1 := req.URL.Host
+	if host1 == "" {
+		host1 = req.Host
+	}
+	host2, _, err := net.SplitHostPort(host1)
+	if err != nil {
+		host2 = host1
+	}
+	if GlobalConfig.SecureURL != "" && GlobalConfig.SecureURL == host2 {
 		errorPassHandle(w, req)
 		return
 	}
@@ -128,22 +136,32 @@ func authenticate(w http.ResponseWriter, req *http.Request) (ret, emptyAuth bool
 // handle HTTP Proxy
 func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 
+	log.Debugln(req.Host, req.URL)
 	var err error
 
-	// step 1: check acl
-	hostPort := req.URL.Host
-	Port := req.URL.Port()
-	if Port == "" {
-		if req.URL.Scheme == "http" {
-			hostPort = net.JoinHostPort(hostPort, "80")
+	// step 0: outbound host
+	var hostPort string
+
+	host1 := req.URL.Host
+	if host1 == "" {
+		host1 = req.Host
+	}
+	host, _, err := net.SplitHostPort(host1)
+	if err == nil {
+		hostPort = host1
+	} else {
+		if req.URL.Scheme == "https" {
+			hostPort = net.JoinHostPort(host, "443")
 		} else {
-			hostPort = net.JoinHostPort(hostPort, "443")
+			hostPort = net.JoinHostPort(host, "80")
 		}
 	}
+
+	//step 1: chack acl
 	tmpHost, tmpPort, err := net.SplitHostPort(hostPort)
 	if err == nil {
 		if !aclCheck(tmpHost, tmpPort) {
-			errorHandle(w, req, http.StatusBadGateway, err)
+			error502Handle(w, req, err)
 			return
 		}
 	}
@@ -152,20 +170,14 @@ func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 	transport := http.DefaultTransport
 	outReq := new(http.Request)
 	outReq = req.Clone(req.Context())
-
-	if outReq.URL.Scheme == "" {
-		outReq.URL.Scheme = "http"
-	}
-	if outReq.Host != "" {
-		outReq.Host = outReq.URL.Host
-	}
+	outReq.Host = tmpHost
 
 	res, err := transport.RoundTrip(outReq)
 	if err != nil {
-		errorHandle(w, req, http.StatusNotFound, err)
+		error500Handle(w, req,  err)
 		return
 	}
-
+	log.Debugln(res)
 	for key, value := range res.Header {
 		for _, v := range value {
 			w.Header().Add(key, v)
@@ -190,7 +202,7 @@ func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
 
 	outbound, err := dial(hostPort)
 	if err != nil {
-		errorHandle(w, req, http.StatusBadGateway, err)
+		error502Handle(w, req, err)
 		return
 	}
 

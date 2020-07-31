@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 )
 
 var bufferPool sync.Pool
@@ -117,10 +118,9 @@ func dial(hostport string) (outbound net.Conn, err error) {
 	if !aclCheck(host, port) {
 		return nil, errors.New("ACL failed, host invalid: " + hostport)
 	}
-	
 
 	if GlobalConfig.Timeout > 0 {
-		outbound, err = net.DialTimeout("tcp", hostport, GlobalConfig.Timeout)
+		outbound, err = net.DialTimeout("tcp", hostport, GlobalConfig.Timeout*time.Second)
 	} else {
 		outbound, err = net.Dial("tcp", hostport)
 	}

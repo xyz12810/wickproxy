@@ -157,7 +157,7 @@ func setHandle() {
 	case "secure_url":
 		GlobalConfig.SecureURL = *setValue
 	case "fallback_url":
-		GlobalConfig.FailbackURL = *setValue
+		GlobalConfig.FallbackURL = *setValue
 	case "cert":
 		GlobalConfig.TLS.Certificate = *setValue
 	case "key":

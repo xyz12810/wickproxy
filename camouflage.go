@@ -23,19 +23,26 @@ func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int) {
 	w.Write([]byte(fb))
 }
 
+func error403Handle(w http.ResponseWriter, req *http.Request, err error) {
+	log.Debugln("[server] error", http.StatusForbidden, err )
+	errorCoreHandle(w, req, http.StatusForbidden)
+}
+
 func error502Handle(w http.ResponseWriter, req *http.Request, err error) {
+	log.Debugln("[server] error", http.StatusBadGateway, err )
 	errorCoreHandle(w, req, http.StatusBadGateway)
 }
 
 func error500Handle(w http.ResponseWriter, req *http.Request, err error) {
+	log.Debugln("[server] error", http.StatusInternalServerError, err )
 	errorCoreHandle(w, req, http.StatusInternalServerError)
 }
 
 func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 
-	log.Infoln("[reverse] proxy to", GlobalConfig.FailbackURL)
+	log.Infoln("[reverse] proxy to", GlobalConfig.FallbackURL)
 	var err error
-	target, err := url.Parse(GlobalConfig.FailbackURL)
+	target, err := url.Parse(GlobalConfig.FallbackURL)
 	if err != nil {
 		log.Errorln("[reverse] url parse error:", err)
 		return
@@ -80,7 +87,7 @@ func errorHandle(w http.ResponseWriter, req *http.Request, code int, err error) 
 	}
 
 	log.Errorln("[server] error:", code, err)
-	if GlobalConfig.FailbackURL != "" {
+	if GlobalConfig.FallbackURL != "" {
 		reverseProxyHandler(w, req)
 		return
 	}
