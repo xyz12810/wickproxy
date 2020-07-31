@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -14,31 +16,46 @@ const (
 )
 
 var (
-	log    = logrus.New()
-	debug  = kingpin.Flag("debug", "enable debug mode").Default("false").Bool()
-	config = kingpin.Flag("config", "config database").Default("config.json").String()
+	log        = logrus.New()
+	versionStr = "Version: " + version + " (platform: " + runtime.GOOS + "-" + runtime.GOARCH + ")"
+
+	debug  = kingpin.Flag("debug", "enable debug mode").Short('d').Default("false").Bool()
+	config = kingpin.Flag("config", "config database").Short('c').Default("config.json").String()
 
 	initCmd   = kingpin.Command("init", "initial the config database")
 	initForce = initCmd.Flag("force", "force to overwrite config database").Default("false").Bool()
 
-	showCmd = kingpin.Command("show", "show the configruation database")
+	showCmd = kingpin.Command("show", "show the config")
 
-	setCmd   = kingpin.Command("set", "set configuration")
+	setCmd   = kingpin.Command("set", "set the config")
 	setKey   = setCmd.Arg("key", "").String()
 	setValue = setCmd.Arg("Value", "").String()
 
-	userAddCmd      = kingpin.Command("useradd", "add new users")
+	userAddCmd      = kingpin.Command("user-add", "create new users")
 	userAddUsername = userAddCmd.Arg("username", "username").Required().String()
 	userAddPassword = userAddCmd.Arg("password", "password").Required().String()
 	userAddQuota    = userAddCmd.Arg("quota", "quota").Default("0").Int()
 	userAddForce    = userAddCmd.Flag("force", "force to add or update a user").Default("false").Bool()
 
-	userDelCmd      = kingpin.Command("userdel", "delete uses")
+	userDelCmd      = kingpin.Command("user-del", "delete user(s)")
 	userDelUsername = userDelCmd.Arg("username", "username").String()
 	userDelAll      = userDelCmd.Flag("all", "delete all users").Default("false").Bool()
 
+	aclAddCmd        = kingpin.Command("acl-add", "insert a rule into ACL")
+	aclAddCmdIndex   = aclAddCmd.Flag("index", "index number to insert a new rule").Default("-1").Int()
+	aclAddCmdContext = aclAddCmd.Arg("context", "domain:port or IP:port or CIDR").Required().String()
+	aclAddCmdAction  = aclAddCmd.Arg("action", "one of the 'allow' or 'deny'").Required().String()
+
+	aclDelCmd      = kingpin.Command("acl-del", "delete a rule from ACL")
+	aclDelCmdAll   = aclDelCmd.Flag("all", "clear the ACL").Default("false").Bool()
+	aclDelCmdIndex = aclDelCmd.Arg("index", "index number to insert a new rule").Default("-1").Int()
+
+	aclListCmd = kingpin.Command("acl-list", "list the ACL")
+
 	runCmd    = kingpin.Command("run", "run the wickproxy server")
 	runServer = runCmd.Arg("server", "server address").String()
+
+	versionCMD = kingpin.Command("version", "print the version")
 )
 
 func logInit(loglevel logrus.Level) {
@@ -53,7 +70,14 @@ func logInit(loglevel logrus.Level) {
 	})
 }
 
+func cmdInit() {
+	kingpin.CommandLine.Help = "Wickproxy is a security HTTP(s) proxy for all platforms. " + versionStr
+	kingpin.CommandLine.Name = "Wickproxy"
+	kingpin.CommandLine.Version(versionStr)
+}
+
 func main() {
+	cmdInit()
 	cmd := kingpin.Parse()
 	if *debug == true {
 		logInit(logrus.DebugLevel)
@@ -68,13 +92,25 @@ func main() {
 		showHandle()
 	case "set":
 		setHandle()
-	case "useradd":
+	case "user-add":
 		useraddHandle()
-	case "userdel":
+	case "user-del":
 		userdelHandle()
+	case "acl-add":
+		acladdHandle()
+	case "acl-del":
+		acldelHandle()
+	case "acl-list":
+		acllist()
 	case "run":
 		serverHandle()
+	case "version":
+		versionHandler()
 	}
+}
+
+func versionHandler() {
+	fmt.Println(versionStr)
 }
 
 func initHandle() {
@@ -140,7 +176,7 @@ func setHandle() {
 func useraddHandle() {
 	err := configReader(*config)
 	if err != nil {
-		log.Fatal("[user] read config error:", err)
+		log.Fatalln("[user] read config error:", err)
 	}
 
 	tmpIdx := -1
@@ -170,14 +206,14 @@ func useraddHandle() {
 
 	err = configWriter(*config)
 	if err != nil {
-		log.Fatal("[user] write to file error:", err)
+		log.Fatalln("[user] write to file error:", err)
 	}
 }
 
 func userdelHandle() {
 	err := configReader(*config)
 	if err != nil {
-		log.Fatal("[user] read config error:", err)
+		log.Fatalln("[user] read config error:", err)
 	}
 
 	if *userDelAll {
@@ -203,4 +239,38 @@ func userdelHandle() {
 		log.Fatalln("[user] write to file error:", err)
 	}
 	log.Debugln("[user] delete user:", *userDelUsername)
+}
+
+func acladdHandle() {
+	err := configReader(*config)
+	if err != nil {
+		log.Fatalln("[user] read config error:", err)
+	}
+
+	idx := *aclAddCmdIndex
+	context := *aclAddCmdContext
+	action := *aclAddCmdAction
+
+	aclAdd(idx, context, action)
+
+	err = configWriter(*config)
+	if err != nil {
+		log.Fatalln("[user] write to file error:", err)
+	}
+}
+
+func acldelHandle() {
+	err := configReader(*config)
+	if err != nil {
+		log.Fatalln("[user] read config error:", err)
+	}
+
+	idx := *aclDelCmdIndex
+	all := *aclDelCmdAll
+	aclDel(idx, all)
+
+	err = configWriter(*config)
+	if err != nil {
+		log.Fatalln("[user] write to file error:", err)
+	}
 }

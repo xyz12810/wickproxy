@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-const defaultServer = "localhost:7890"
+const defaultServer = "0.0.0.0:7890"
 
 type proxyServer struct{}
 
@@ -72,7 +72,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			host = hostport
 		}
-		
+
 		if GlobalConfig.SecureURL == "" || (GlobalConfig.SecureURL == host) {
 			errorHandle(w, req, http.StatusForbidden, errors.New("Authenticate Failed"))
 			return
@@ -137,8 +137,9 @@ func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 	if outReq.URL.Scheme == "" {
 		outReq.URL.Scheme = "http"
 	}
-
-	outReq.Host = outReq.URL.Host
+	if outReq.Host != "" {
+		outReq.Host = outReq.URL.Host
+	}
 
 	res, err := transport.RoundTrip(outReq)
 	if err != nil {

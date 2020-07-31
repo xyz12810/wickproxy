@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"time"
 )
@@ -13,10 +14,17 @@ type userConfig struct {
 	Quato    int
 }
 
+type aclConfig struct {
+	IsAllow bool
+	Domain  string
+	Addr    net.IPNet
+	Port    string
+}
+
 type globalConfig struct {
 	Server string
 
-	SecureURL  string
+	SecureURL   string
 	FailbackURL string
 
 	Timeout time.Duration
@@ -27,10 +35,15 @@ type globalConfig struct {
 	}
 
 	Users []userConfig
+	ACL   []aclConfig
 }
 
 // GlobalConfig is global configuration
-var GlobalConfig globalConfig = globalConfig{Users: make([]userConfig, 0)}
+var GlobalConfig globalConfig = globalConfig{
+	Server:  "0.0.0.0:7890",
+	Timeout: 10 * time.Second,
+	Users:   make([]userConfig, 0),
+	ACL:     make([]aclConfig, 0)}
 
 func configReader(configFile string) error {
 	file, err := os.Open(configFile)
