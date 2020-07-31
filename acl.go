@@ -15,14 +15,6 @@ func aclPrivateCheck(host string) bool {
 	return ip.IsGlobalUnicast()
 }
 
-func aclHostCheck(host string) bool {
-	return true
-}
-
-func aclPortCheck(port string) bool {
-	return true
-}
-
 func aclAdd(index int, context, action string) {
 
 	if action != "allow" {
@@ -129,4 +121,36 @@ func acllist() {
 		}
 		fmt.Printf("\n")
 	}
+}
+
+func aclCheck(host, port string) bool {
+	for _, v := range GlobalConfig.ACL {
+		log.Debugln("[ACL] request:",host,port,"rule:", v)
+		if aclMatch(host, port, v) {
+			if v.IsAllow {
+				return true
+			}
+			return false
+		}
+	}
+	return true
+}
+
+func aclMatch(host, port string, rule aclConfig) bool {
+	if rule.Port != "" && port != rule.Port {
+		return false
+	}
+
+	IP := net.ParseIP(host)
+	if IP == nil {
+		if host == rule.Domain {
+			return true
+		}
+		return false
+	}
+
+	if rule.Addr.Contains(IP) {
+		return true
+	}
+	return false
 }

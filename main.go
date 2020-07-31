@@ -39,7 +39,7 @@ var (
 
 	userDelCmd      = kingpin.Command("user-del", "delete user(s)")
 	userDelUsername = userDelCmd.Arg("username", "username").String()
-	userDelAll      = userDelCmd.Flag("all", "delete all users").Default("false").Bool()
+	userDelAll      = userDelCmd.Flag("all", "delete all users").Short('a').Default("false").Bool()
 
 	aclAddCmd        = kingpin.Command("acl-add", "insert a rule into ACL")
 	aclAddCmdIndex   = aclAddCmd.Flag("index", "index number to insert a new rule").Default("-1").Int()
@@ -47,7 +47,7 @@ var (
 	aclAddCmdAction  = aclAddCmd.Arg("action", "one of the 'allow' or 'deny'").Required().String()
 
 	aclDelCmd      = kingpin.Command("acl-del", "delete a rule from ACL")
-	aclDelCmdAll   = aclDelCmd.Flag("all", "clear the ACL").Default("false").Bool()
+	aclDelCmdAll   = aclDelCmd.Flag("all", "clear the ACL").Short('a').Default("false").Bool()
 	aclDelCmdIndex = aclDelCmd.Arg("index", "index number to insert a new rule").Default("-1").Int()
 
 	aclListCmd = kingpin.Command("acl-list", "list the ACL")

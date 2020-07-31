@@ -114,14 +114,15 @@ func dial(hostport string) (outbound net.Conn, err error) {
 		return nil, errors.New("ACL failed, private IP address: " + host)
 	}
 
-	if !aclHostCheck(host) {
-		return nil, errors.New("ACL failed, host invalid: " + host)
+	if !aclCheck(host, port) {
+		return nil, errors.New("ACL failed, host invalid: " + hostport)
 	}
+	
 
-	if !aclPortCheck(port) {
-		return nil, errors.New("ACL failed, host invalid: " + port)
+	if GlobalConfig.Timeout > 0 {
+		outbound, err = net.DialTimeout("tcp", hostport, GlobalConfig.Timeout)
+	} else {
+		outbound, err = net.Dial("tcp", hostport)
 	}
-
-	outbound, err = net.Dial("tcp", hostport)
 	return
 }
