@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type userConfig struct {
@@ -17,8 +15,8 @@ type userConfig struct {
 type globalConfig struct {
 	Server string
 
-	HideURL string
-	FailURL string
+	SecureURL  string
+	ReverseURL string
 
 	TLS struct {
 		Certificate    string
@@ -43,7 +41,7 @@ func configReader(configFile string) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("Read config from", configFile)
+	log.Debugln("Read config from", configFile)
 	return nil
 }
 
@@ -59,7 +57,7 @@ func configWriter(configFile string) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("Write config to", configFile)
+	log.Debugln("Write config to", configFile)
 	return nil
 }
 

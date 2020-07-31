@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -12,6 +12,7 @@ const (
 )
 
 var (
+	log    = logrus.New()
 	debug  = kingpin.Flag("debug", "enable debug mode").Default("false").Bool()
 	config = kingpin.Flag("config", "config database").Default("config.json").String()
 
@@ -38,10 +39,10 @@ var (
 	runServer = runCmd.Arg("server", "server address").String()
 )
 
-func logInit(loglevel log.Level) {
+func logInit(loglevel logrus.Level) {
 	log.SetLevel(loglevel)
 	log.SetOutput(os.Stdout)
-	log.SetFormatter(&log.TextFormatter{
+	log.SetFormatter(&logrus.TextFormatter{
 		ForceColors:               true,
 		TimestampFormat:           "2006-01-02 15:04:05",
 		EnvironmentOverrideColors: true,
@@ -53,9 +54,9 @@ func logInit(loglevel log.Level) {
 func main() {
 	cmd := kingpin.Parse()
 	if *debug == true {
-		logInit(log.DebugLevel)
+		logInit(logrus.DebugLevel)
 	} else {
-		logInit(log.InfoLevel)
+		logInit(logrus.InfoLevel)
 	}
 
 	switch cmd {
@@ -70,6 +71,7 @@ func main() {
 	case "userdel":
 		userdelHandle()
 	case "run":
+		serverHandle()
 	}
 }
 
@@ -77,7 +79,7 @@ func initHandle() {
 	log.Debug("[init] Init configuation file:", *config)
 
 	if configExists(*config) && !*initForce {
-		log.Info("[init] configuration file exists. Use --force true to overwrite it.")
+		log.Infoln("[init] configuration file exists. Use --force true to overwrite it.")
 		return
 	}
 
@@ -88,30 +90,30 @@ func initHandle() {
 }
 
 func showHandle() {
-	log.Debug("[show] show configuation file:", *config)
+	log.Debugln("[show] show configuation file:", *config)
 	err := configReader(*config)
 	if err != nil {
 		log.Fatal("[show] read config error:", err)
 	}
 	err = configPrint()
 	if err != nil {
-		log.Fatal("[show] read config error:", err)
+		log.Fatalln("[show] read config error:", err)
 	}
 }
 
 func setHandle() {
 	err := configReader(*config)
 	if err != nil {
-		log.Fatal("[set] read config error:", err)
+		log.Fatalln("[set] read config error:", err)
 	}
 
 	switch *setKey {
 	case "server":
 		GlobalConfig.Server = *setValue
-	case "hide_url":
-		GlobalConfig.HideURL = *setValue
-	case "fail_url":
-		GlobalConfig.FailURL = *setValue
+	case "secure_url":
+		GlobalConfig.SecureURL = *setValue
+	case "reverse_url":
+		GlobalConfig.ReverseURL = *setValue
 	case "cert":
 		GlobalConfig.TLS.Certificate = *setValue
 	case "key":
@@ -148,14 +150,14 @@ func useraddHandle() {
 			Password: *userAddPassword,
 			Quato:    *userAddQuota}
 
-		log.Debug("[user] update a existed user")
+		log.Debugln("[user] update a existed user")
 	} else {
 		GlobalConfig.Users = append(GlobalConfig.Users,
 			userConfig{
 				Username: *userAddUsername,
 				Password: *userAddPassword,
 				Quato:    *userAddQuota})
-		log.Debug("[user] add a new user")
+		log.Debugln("[user] add a new user")
 	}
 
 	err = configWriter(*config)
@@ -176,7 +178,7 @@ func userdelHandle() {
 		if err != nil {
 			log.Fatal("[user] write to file error:", err)
 		}
-		log.Debug("[user] delete all users")
+		log.Debugln("[user] delete all users")
 		return
 	}
 
@@ -190,7 +192,7 @@ func userdelHandle() {
 
 	err = configWriter(*config)
 	if err != nil {
-		log.Fatal("[user] write to file error:", err)
+		log.Fatalln("[user] write to file error:", err)
 	}
-	log.Debug("[user] delete user:", *userDelUsername)
+	log.Debugln("[user] delete user:", *userDelUsername)
 }
