@@ -10,6 +10,11 @@ import (
 
 var bufferPool sync.Pool
 
+func poolInit() {
+	makeBuffer := func() interface{} { return make([]byte, 0, 32*1024) }
+	bufferPool = sync.Pool{New: makeBuffer}
+}
+
 func flushingIoCopy(dst io.Writer, src io.Reader, buf []byte) (written int64, err error) {
 	flusher, ok := dst.(http.Flusher)
 	if !ok {
@@ -89,7 +94,7 @@ func serveHijack(w http.ResponseWriter, targetConn net.Conn) (int, error) {
 		ProtoMinor: 1,
 		Header:     make(http.Header),
 	}
-	res.Header.Set("Server", "Caddy")
+	res.Header.Set("Server", fakeServer)
 
 	err = res.Write(clientConn)
 	if err != nil {
@@ -97,4 +102,26 @@ func serveHijack(w http.ResponseWriter, targetConn net.Conn) (int, error) {
 	}
 
 	return 0, dualStream(targetConn, clientConn, clientConn)
+}
+
+func dial(hostport string) (outbound net.Conn, err error) {
+	host, port, err := net.SplitHostPort(hostport)
+	if err != nil {
+		return nil, err
+	}
+
+	if !aclPrivateCheck(host) {
+		return nil, errors.New("ACL failed, private IP address: " + host)
+	}
+
+	if !aclHostCheck(host) {
+		return nil, errors.New("ACL failed, host invalid: " + host)
+	}
+
+	if !aclPortCheck(port) {
+		return nil, errors.New("ACL failed, host invalid: " + port)
+	}
+
+	outbound, err = net.Dial("tcp", hostport)
+	return
 }

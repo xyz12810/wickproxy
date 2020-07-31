@@ -24,11 +24,11 @@ func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int) {
 }
 
 func error502Handle(w http.ResponseWriter, req *http.Request, err error) {
-	errorCoreHandle(w, req, 502)
+	errorCoreHandle(w, req, http.StatusBadGateway)
 }
 
 func error500Handle(w http.ResponseWriter, req *http.Request, err error) {
-	errorCoreHandle(w, req, 500)
+	errorCoreHandle(w, req, http.StatusInternalServerError)
 }
 
 func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
@@ -75,7 +75,7 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 func errorHandle(w http.ResponseWriter, req *http.Request, code int, err error) {
 
 	if code == 0 {
-		code = 404
+		code = http.StatusNotFound
 	}
 
 	log.Errorln("[server] error:", code, err)
@@ -84,4 +84,28 @@ func errorHandle(w http.ResponseWriter, req *http.Request, code int, err error) 
 		return
 	}
 	errorCoreHandle(w, req, code)
+}
+
+func error407Handle(w http.ResponseWriter, req *http.Request) {
+	w.Header().Add("server", fakeServer)
+	w.Header().Add("content-type", "text/html")
+	w.Header().Add("Proxy-Authenticate", "Basic realm=\"Wickproxy Secure Proxy\"")
+
+	code := http.StatusProxyAuthRequired
+	statusText := http.StatusText(code)
+	fb := fmt.Sprintf(fakeBody, code, statusText, code, statusText, fakeServer)
+
+	w.WriteHeader(code)
+	w.Write([]byte(fb))
+}
+
+func errorPassHandle(w http.ResponseWriter, req *http.Request) {
+	w.Header().Add("server", fakeServer)
+	w.Header().Add("content-type", "text/html")
+
+	code := http.StatusOK
+	fb := fmt.Sprintf(fakeBody, code, "Authenticate Successful", code, "Authenticate Successful", fakeServer)
+
+	w.WriteHeader(code)
+	w.Write([]byte(fb))
 }

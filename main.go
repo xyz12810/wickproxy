@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -110,6 +112,12 @@ func setHandle() {
 	switch *setKey {
 	case "server":
 		GlobalConfig.Server = *setValue
+	case "timeout":
+		t, err := strconv.ParseInt(*setValue, 10, 64)
+		if err != nil {
+			log.Fatalln("timeout invalid!", *setKey)
+		}
+		GlobalConfig.Timeout = time.Duration(t)
 	case "secure_url":
 		GlobalConfig.SecureURL = *setValue
 	case "reverse_url":
@@ -119,7 +127,7 @@ func setHandle() {
 	case "key":
 		GlobalConfig.TLS.CertificateKey = *setValue
 	default:
-		log.Fatal("no such key:", *setKey)
+		log.Fatalln("no such key:", *setKey)
 	}
 
 	err = configWriter(*config)

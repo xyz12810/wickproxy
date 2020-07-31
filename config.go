@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 )
 
 type userConfig struct {
@@ -17,6 +18,8 @@ type globalConfig struct {
 
 	SecureURL  string
 	ReverseURL string
+
+	Timeout time.Duration
 
 	TLS struct {
 		Certificate    string
