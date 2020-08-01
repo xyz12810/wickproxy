@@ -11,7 +11,7 @@ import (
 
 const fakeServer = "nginx/1.18.0 (Ubuntu)"
 
-const padding = "<!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page -->"
+const padding = "<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n"
 
 var fakeBody = "<html>\n<head><title>%v %v</title></head>\n<body bgcolor=\"white\">\n<center><h1>%v %v</h1></center>\n<hr><center>%v</center>\n</body>\n</html>\n" + padding
 
@@ -47,14 +47,15 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 	var err error
 	target, err := url.Parse(GlobalConfig.FallbackURL)
 	if err != nil {
-		log.Errorln("[reverse] url parse error:", err)
+		log.Debugln("[reverse] url parse error:", err)
+		errorCoreHandle(w, req, http.StatusNotFound)
 		return
 	}
 
 	transport := http.DefaultTransport
 	outReq := new(http.Request)
 	outReq = req.Clone(req.Context())
-	*outReq.URL = *target
+	outReq.URL = target
 	outReq.Host = target.Host
 	outReq.URL.User = req.URL.User
 	removeHopByHop(req.Header)
