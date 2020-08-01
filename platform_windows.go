@@ -20,7 +20,7 @@ func runHandle() {
 	}
 
 	c := make(chan os.Signal)
-	signal.Notify(c, syscall.SIGINT)
+	signal.Notify(c, os.Kill)
 
 	go func() {
 		for {
@@ -39,5 +39,5 @@ func runHandle() {
 }
 
 func signHandle(cmd string) {
-	log.Println("[cmd] only usable for unix/linux systems")
+	log.Fatalln("[cmd] only usable for unix/linux systems")
 }
