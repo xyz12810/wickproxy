@@ -52,6 +52,9 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 	ret, emptyAuth, username := authenticate(w, req)
 	if emptyAuth {
 		hostport := req.URL.Host
+		if hostport == "" {
+			hostport = req.Host
+		}
 		host, _, err := net.SplitHostPort(hostport)
 		if err != nil {
 			host = hostport
