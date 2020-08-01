@@ -31,3 +31,25 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 	}
 	return cs[:s], cs[s+1:], true
 }
+
+var hopByHopHeaders = []string{
+	"Keep-Alive",
+	"Proxy-Authenticate",
+	"Proxy-Authorization",
+	"Upgrade",
+	"Connection",
+	"Proxy-Connection",
+	"Te",
+	"Trailer",
+	"Transfer-Encoding",
+}
+
+func removeHopByHop(header http.Header) {
+	connectionHeaders := header.Get("Connection")
+	for _, h := range strings.Split(connectionHeaders, ",") {
+		header.Del(strings.TrimSpace(h))
+	}
+	for _, h := range hopByHopHeaders {
+		header.Del(h)
+	}
+}

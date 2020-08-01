@@ -57,7 +57,7 @@ func configReader(configFile string) error {
 	if err != nil {
 		return err
 	}
-	log.Debugln("Read config from", configFile)
+	log.Debugln("[config] read config from", configFile)
 	return nil
 }
 
@@ -73,7 +73,7 @@ func configWriter(configFile string) error {
 	if err != nil {
 		return err
 	}
-	log.Debugln("Write config to", configFile)
+	log.Debugln("[config] write config to", configFile)
 	return nil
 }
 

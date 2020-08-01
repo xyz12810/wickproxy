@@ -102,7 +102,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// start to proxy
-	log.Infoln("[transfer] user["+username+"]", req.Method, req.Host, req.URL)
+	log.Debugln("[proxy] user["+username+"]", req.Method, req.Host, req.URL)
 
 	// For http proxy
 	if req.Method != http.MethodConnect {
@@ -140,27 +140,22 @@ func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 	var err error
 
 	// step 0: outbound host
-	var hostPort string
 
 	host1 := req.URL.Host
 	if host1 == "" {
 		host1 = req.Host
 	}
-	host, _, err := net.SplitHostPort(host1)
-	if err == nil {
-		hostPort = host1
-	} else {
+	host, port, err := net.SplitHostPort(host1)
+	if err != nil {
+		host = host1
 		if req.URL.Scheme == "https" {
-			hostPort = net.JoinHostPort(host, "443")
+			port = "443"
 		} else {
-			hostPort = net.JoinHostPort(host, "80")
+			port = "80"
 		}
 	}
-
-	//step 1: chack acl
-	tmpHost, tmpPort, err := net.SplitHostPort(hostPort)
 	if err == nil {
-		if !aclCheck(tmpHost, tmpPort) {
+		if !aclCheck(host, port) {
 			error502Handle(w, req, err)
 			return
 		}
@@ -170,14 +165,24 @@ func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 	transport := http.DefaultTransport
 	outReq := new(http.Request)
 	outReq = req.Clone(req.Context())
-	outReq.Host = tmpHost
+	if outReq.URL.Scheme == "" {
+		outReq.URL.Scheme = "http"
+	}
+	if outReq.URL.Host == "" {
+		outReq.URL.Host = outReq.Host
+	}
+	outReq.Proto = "HTTP/1.1"
+	outReq.ProtoMajor = 1
+	outReq.ProtoMinor = 1
+	removeHopByHop(outReq.Header)
 
 	res, err := transport.RoundTrip(outReq)
 	if err != nil {
-		error500Handle(w, req,  err)
+		error500Handle(w, req, err)
 		return
 	}
-	log.Debugln(res)
+
+	removeHopByHop(res.Header)
 	for key, value := range res.Header {
 		for _, v := range value {
 			w.Header().Add(key, v)

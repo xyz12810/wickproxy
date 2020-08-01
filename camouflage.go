@@ -24,23 +24,23 @@ func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int) {
 }
 
 func error403Handle(w http.ResponseWriter, req *http.Request, err error) {
-	log.Debugln("[server] error", http.StatusForbidden, err )
+	log.Errorln("[server] error", http.StatusForbidden, err)
 	errorCoreHandle(w, req, http.StatusForbidden)
 }
 
 func error502Handle(w http.ResponseWriter, req *http.Request, err error) {
-	log.Debugln("[server] error", http.StatusBadGateway, err )
+	log.Errorln("[server] error", http.StatusBadGateway, err)
 	errorCoreHandle(w, req, http.StatusBadGateway)
 }
 
 func error500Handle(w http.ResponseWriter, req *http.Request, err error) {
-	log.Debugln("[server] error", http.StatusInternalServerError, err )
+	log.Errorln("[server] error", http.StatusInternalServerError, err)
 	errorCoreHandle(w, req, http.StatusInternalServerError)
 }
 
 func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 
-	log.Infoln("[reverse] proxy to", GlobalConfig.FallbackURL)
+	log.Errorln("[reverse] proxy to", GlobalConfig.FallbackURL)
 	var err error
 	target, err := url.Parse(GlobalConfig.FallbackURL)
 	if err != nil {
@@ -54,6 +54,7 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 	*outReq.URL = *target
 	outReq.Host = target.Host
 	outReq.URL.User = req.URL.User
+	removeHopByHop(req.Header)
 
 	log.Debugln("[reverse] reverse proxy to:", outReq.URL.Scheme, outReq.URL.Host)
 	if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
@@ -69,6 +70,7 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	removeHopByHop(res.Header)
 	for key, value := range res.Header {
 		for _, v := range value {
 			w.Header().Add(key, v)
