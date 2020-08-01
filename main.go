@@ -173,6 +173,11 @@ func startHandle() {
 }
 
 func runHandle() {
+
+	if GlobalConfig.PID != 0 {
+		log.Fatalln("[cmd] there is a wickproxy running. quit!")
+	}
+
 	GlobalConfig.PID = os.Getpid()
 	err := configWriter(*config)
 	if err != nil {
@@ -188,7 +193,7 @@ func runHandle() {
 			sig := <-c
 			switch sig {
 			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGUSR1:
-				log.Infoln("[signal] server quit!")
+				log.Infoln("[signal] server exit!")
 				GlobalConfig.PID = 0
 				configWriter(*config)
 				os.Exit(0)

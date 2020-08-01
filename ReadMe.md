@@ -43,6 +43,13 @@ wickproxy -d run # run in debug mode
 wickproxy -c /etc/config.json run # specify the configuration file
 ```
 
+It is able for Wickproxy to reload configuration file or run in the background:
+```
+wickproxy start # start a wickproxy service in the background
+wickproxy stop # kill the wickproxy service
+wickproxy reload # ask wickproxy to reload configuration file 
+```
+
 ### Basic configurations
 
 Use `wickproxy init` to create a new copy of configuration file and use `wickproxy show` to print the configuratons.
@@ -50,6 +57,7 @@ Use `wickproxy init` to create a new copy of configuration file and use `wickpro
 Use `wickproxy set [key] [value]` command to change. These keys are available:
 
 > * server:     The address wickproxy will listen to. Default is `127.0.0.1:7890`
+> * logging:    Wickproxy will write log into `logging` file. It is only enabled in `run` or `start` command.
 > * timeout:    Wickproxy will try to wait `timeout` seconds when connect to the next hop.
 > * secure_url: When `secure_url` is not none, only requests to `secure_url` will trick a 407 proxy-authentication response. It is used to hide as a proxy server. Example: `whtql.secure.com`
 > * fallback_url: When `fallback_url` is not none, wickproxy will rewrite all illegal requests to `fallback_url`. Wickproxy will camouflage itself as a nginx server when `fallback_url` is none.
@@ -98,6 +106,7 @@ Flags:
       --help                  Show context-sensitive help (also try --help-long and --help-man).
   -d, --debug                 Set log level to 'debug'.
   -c, --config="config.json"  special configuration file.
+  -l, --log=LOG               logging file
       --version               Show application version.
 
 Commands:
