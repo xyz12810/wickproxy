@@ -9,8 +9,11 @@ import (
 	"strings"
 )
 
-const fakeServer = "nginx/1.14.0 (Ubuntu)"
-const fakeBody = "<html>\n<head><title>%v %v</title></head>\n<body bgcolor=\"white\">\n<center><h1>%v %v</h1></center>\n<hr><center>%v</center>\n</body>\n</html>\n"
+const fakeServer = "nginx/1.18.0 (Ubuntu)"
+
+const padding = "<!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page --><!-- a padding to disable MSIE and Chrome friendly error page -->"
+
+var fakeBody = "<html>\n<head><title>%v %v</title></head>\n<body bgcolor=\"white\">\n<center><h1>%v %v</h1></center>\n<hr><center>%v</center>\n</body>\n</html>\n" + padding
 
 func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int) {
 	w.Header().Add("server", fakeServer)
@@ -114,7 +117,7 @@ func errorPassHandle(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("content-type", "text/html")
 
 	code := http.StatusOK
-	fb := fmt.Sprintf(fakeBody, code, "Authenticate Successful", code, "Congratulations, you are successfully authenticated to the proxy! Go browse all the things!", fakeServer)
+	fb := fmt.Sprintf(fakeBody, code, "Authenticate Successful", code, "Authenticate Successful!", fakeServer)
 
 	w.WriteHeader(code)
 	w.Write([]byte(fb))
