@@ -28,6 +28,8 @@ type globalConfig struct {
 	FallbackURL string
 
 	Timeout time.Duration
+	Logging string
+	PID     int
 
 	TLS struct {
 		Certificate    string

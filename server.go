@@ -28,10 +28,6 @@ func getServer() string {
 
 func serverHandle() {
 	var err error
-	err = configReader(*config)
-	if err != nil {
-		log.Fatalln("[set] read config error:", err)
-	}
 
 	poolInit()
 

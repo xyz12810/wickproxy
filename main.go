@@ -3,8 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
 	"runtime"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -18,9 +21,11 @@ const (
 var (
 	log        = logrus.New()
 	versionStr = "Version: " + version + " (platform: " + runtime.GOOS + "-" + runtime.GOARCH + ")."
+	logFile    os.File
 
 	debug  = kingpin.Flag("debug", "Set log level to 'debug'.").Short('d').Default("false").Bool()
 	config = kingpin.Flag("config", "special configuration file.").Short('c').Default("config.json").String()
+	logf   = kingpin.Flag("log", "logging file").Short('l').String()
 
 	initCmd   = kingpin.Command("init", "Create a initial copy of configuration file.")
 	initForce = initCmd.Flag("force", "Force to overwrite configuration file.").Short('f').Default("false").Bool()
@@ -55,19 +60,39 @@ var (
 	runCmd    = kingpin.Command("run", "Run the wickproxy server.")
 	runServer = runCmd.Arg("server", "Server address. Example: `0.0.0.0:7890`.").String()
 
+	startCmd   = kingpin.Command("start", "Run the wickproxy server as daemon service.")
+	stopCmd    = kingpin.Command("stop", "stop a wickproxy  daemon  service")
+	reloadCmd  = kingpin.Command("reload", "reload configuration file")
 	versionCMD = kingpin.Command("version", "Print the version and platforms.")
 )
 
-func logInit(loglevel logrus.Level) {
+func logInit(loglevel logrus.Level, logf string, cmd string) {
 	log.SetLevel(loglevel)
-	log.SetOutput(os.Stdout)
-	log.SetFormatter(&logrus.TextFormatter{
-		ForceColors:               true,
-		TimestampFormat:           "2006-01-02 15:04:05",
-		EnvironmentOverrideColors: true,
-		FullTimestamp:             true,
-		// DisableLevelTruncation:true,
-	})
+
+	if logf == "" && cmd == runCmd.FullCommand() {
+		logf = GlobalConfig.Logging
+	}
+
+	if logf == "" {
+		log.SetOutput(os.Stdout)
+		log.SetFormatter(&logrus.TextFormatter{
+			ForceColors:               true,
+			TimestampFormat:           "2006-01-02 15:04:05",
+			EnvironmentOverrideColors: true,
+			FullTimestamp:             true,
+		})
+	} else {
+		logFile, err := os.Create(logf)
+		if err != nil {
+			log.Fatalln("[log] can not open(create) file", logf)
+		}
+		log.SetOutput(logFile)
+		log.SetFormatter(&logrus.TextFormatter{
+			TimestampFormat:           "2006-01-02 15:04:05",
+			EnvironmentOverrideColors: true,
+			FullTimestamp:             true,
+		})
+	}
 }
 
 func cmdInit() {
@@ -77,34 +102,50 @@ func cmdInit() {
 }
 
 func main() {
+	// Command parse
 	cmdInit()
 	cmd := kingpin.Parse()
-	if *debug == true {
-		logInit(logrus.DebugLevel)
-	} else {
-		logInit(logrus.InfoLevel)
+
+	// Read config
+	err := configReader(*config)
+	if err != nil {
+		log.Println("[cmd] no configuration file found, create one.")
+		initHandle()
+		return
 	}
 
+	// Logging initial
+	if *debug == true {
+		logInit(logrus.DebugLevel, *logf, cmd)
+	} else {
+		logInit(logrus.InfoLevel, *logf, cmd)
+	}
+	defer logFile.Close()
+
 	switch cmd {
-	case "init":
+	case initCmd.FullCommand():
 		initHandle()
-	case "show":
+	case showCmd.FullCommand():
 		showHandle()
-	case "set":
+	case setCmd.FullCommand():
 		setHandle()
-	case "user-add":
+	case userAddCmd.FullCommand():
 		useraddHandle()
-	case "user-del":
+	case userDelCmd.FullCommand():
 		userdelHandle()
-	case "acl-add":
+	case aclAddCmd.FullCommand():
 		acladdHandle()
-	case "acl-del":
+	case aclDelCmd.FullCommand():
 		acldelHandle()
-	case "acl-list":
+	case aclListCmd.FullCommand():
 		acllist()
-	case "run":
-		serverHandle()
-	case "version":
+	case runCmd.FullCommand():
+		runHandle()
+	case startCmd.FullCommand():
+		startHandle()
+	case stopCmd.FullCommand(), reloadCmd.FullCommand():
+		signHandle(cmd)
+	case versionCMD.FullCommand():
 		versionHandler()
 	}
 }
@@ -113,41 +154,100 @@ func versionHandler() {
 	fmt.Println(versionStr)
 }
 
+func startHandle() {
+	newArgs := make([]string, 0)
+	for _, arg := range os.Args {
+		if arg == startCmd.FullCommand() {
+			newArgs = append(newArgs, "run")
+		} else {
+			newArgs = append(newArgs, arg)
+		}
+	}
+
+	cmd := exec.Command(newArgs[0], newArgs[1:]...)
+	if err := cmd.Start(); err != nil {
+		log.Fatalf("[cmd] start %s failed, error: %v\n", newArgs[0], err)
+	}
+
+	fmt.Printf("[cmd] %s [PID] %d running...\n", newArgs[0], cmd.Process.Pid)
+}
+
+func runHandle() {
+	GlobalConfig.PID = os.Getpid()
+	err := configWriter(*config)
+	if err != nil {
+		log.Fatalln("[cmd] write pid to config file error:", err)
+	}
+
+	// Signal Process
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGUSR1, syscall.SIGUSR2)
+
+	go func() {
+		for {
+			sig := <-c
+			switch sig {
+			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGUSR1:
+				log.Infoln("[signal] server quit!")
+				GlobalConfig.PID = 0
+				configWriter(*config)
+				os.Exit(0)
+			case syscall.SIGUSR2:
+				log.Infoln("[signal] reload configuration file")
+				err := configReader(*config)
+				if err != nil {
+					log.Infoln("[cmd] reload configuration file found error:", err)
+					return
+				}
+			}
+		}
+	}()
+
+	serverHandle()
+}
+
+func signHandle(cmd string) {
+	if GlobalConfig.PID == 0 {
+		log.Fatalln("[cmd] no server is running in the background")
+	}
+	if cmd == stopCmd.FullCommand() {
+		syscall.Kill(GlobalConfig.PID, syscall.SIGUSR1)
+		return
+	} else if cmd == reloadCmd.FullCommand() {
+		syscall.Kill(GlobalConfig.PID, syscall.SIGUSR2)
+		return
+	}
+	log.Fatalln("[cmd] internal error:", cmd)
+}
+
 func initHandle() {
 	log.Debug("[init] Init config from:", *config)
 
 	if configExists(*config) && !*initForce {
-		log.Errorln("[init] configuration file exists. Use --force true to overwrite it.")
+		log.Panicln("[init] configuration file exists. Use --force true to overwrite it.")
 		return
 	}
 
 	err := configWriter(*config)
 	if err != nil {
-		log.Fatal("[init] write to file error:", err)
+		log.Fatalln("[init] write to file error:", err)
 	}
 }
 
 func showHandle() {
-	log.Debugln("[show] show configuation file:", *config)
-	err := configReader(*config)
-	if err != nil {
-		log.Fatal("[show] read config error:", err)
-	}
-	err = configPrint()
+	err := configPrint()
 	if err != nil {
 		log.Fatalln("[show] read config error:", err)
 	}
 }
 
 func setHandle() {
-	err := configReader(*config)
-	if err != nil {
-		log.Fatalln("[set] read config error:", err)
-	}
 
 	switch *setKey {
 	case "server":
 		GlobalConfig.Server = *setValue
+	case "logging":
+		GlobalConfig.Logging = *setValue
 	case "timeout":
 		t, err := strconv.ParseInt(*setValue, 10, 64)
 		if err != nil {
@@ -166,7 +266,7 @@ func setHandle() {
 		log.Fatalln("[cmd] no such key:", *setKey)
 	}
 
-	err = configWriter(*config)
+	err := configWriter(*config)
 	if err != nil {
 		log.Fatal("[set] write to file error:", err)
 	}
@@ -174,11 +274,6 @@ func setHandle() {
 }
 
 func useraddHandle() {
-	err := configReader(*config)
-	if err != nil {
-		log.Fatalln("[user] read config error:", err)
-	}
-
 	tmpIdx := -1
 	for i, v := range GlobalConfig.Users {
 		if v.Username == *userAddUsername && !*userAddForce {
@@ -204,21 +299,16 @@ func useraddHandle() {
 		log.Debugln("[user] add a new user")
 	}
 
-	err = configWriter(*config)
+	err := configWriter(*config)
 	if err != nil {
 		log.Fatalln("[user] write to file error:", err)
 	}
 }
 
 func userdelHandle() {
-	err := configReader(*config)
-	if err != nil {
-		log.Fatalln("[user] read config error:", err)
-	}
-
 	if *userDelAll {
 		GlobalConfig.Users = make([]userConfig, 0)
-		err = configWriter(*config)
+		err := configWriter(*config)
 		if err != nil {
 			log.Fatal("[user] write to file error:", err)
 		}
@@ -234,7 +324,7 @@ func userdelHandle() {
 	}
 	GlobalConfig.Users = tmpUsers
 
-	err = configWriter(*config)
+	err := configWriter(*config)
 	if err != nil {
 		log.Fatalln("[user] write to file error:", err)
 	}
@@ -242,34 +332,24 @@ func userdelHandle() {
 }
 
 func acladdHandle() {
-	err := configReader(*config)
-	if err != nil {
-		log.Fatalln("[user] read config error:", err)
-	}
-
 	idx := *aclAddCmdIndex
 	context := *aclAddCmdContext
 	action := *aclAddCmdAction
 
 	aclAdd(idx, context, action)
 
-	err = configWriter(*config)
+	err := configWriter(*config)
 	if err != nil {
 		log.Fatalln("[user] write to file error:", err)
 	}
 }
 
 func acldelHandle() {
-	err := configReader(*config)
-	if err != nil {
-		log.Fatalln("[user] read config error:", err)
-	}
-
 	idx := *aclDelCmdIndex
 	all := *aclDelCmdAll
 	aclDel(idx, all)
 
-	err = configWriter(*config)
+	err := configWriter(*config)
 	if err != nil {
 		log.Fatalln("[user] write to file error:", err)
 	}

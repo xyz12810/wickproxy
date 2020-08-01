@@ -97,11 +97,6 @@ func aclDel(idx int, all bool) {
 }
 
 func acllist() {
-	err := configReader(*config)
-	if err != nil {
-		log.Fatalln("[user] read config error:", err)
-	}
-
 	for i, v := range GlobalConfig.ACL {
 		fmt.Printf("[%v]\t", i)
 
