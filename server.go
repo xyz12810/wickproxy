@@ -71,6 +71,9 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 	// Authenticate Failed
 	if ret == false {
 		hostport := req.URL.Host
+		if hostport == "" {
+			hostport = req.Host
+		}
 		host, _, err := net.SplitHostPort(hostport)
 		if err != nil {
 			host = hostport
