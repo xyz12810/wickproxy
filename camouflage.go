@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const fakeServer = "nginx/1.18.0 (Ubuntu)"
+const fakeServer = "nginx/1.16.0 (Ubuntu)"
 
 const padding = "<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n"
 

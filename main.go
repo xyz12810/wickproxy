@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	version = "v0.1.1-beta"
+	version = "v0.1.2-beta"
 )
 
 var (
