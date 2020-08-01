@@ -21,13 +21,13 @@ func runHandle() {
 
 	// Signal Process
 	c := make(chan os.Signal)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGUSR1, syscall.SIGUSR2)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
 
 	go func() {
 		for {
 			sig := <-c
 			switch sig {
-			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGUSR1:
+			case syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR1:
 				log.Infoln("[signal] server exit!")
 				GlobalConfig.PID = 0
 				configWriter(*config)

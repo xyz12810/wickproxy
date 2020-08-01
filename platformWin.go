@@ -2,7 +2,11 @@
 
 package main
 
-import "os"
+import (
+	"os"
+	"os/signal"
+	"syscall"
+)
 
 func runHandle() {
 	if GlobalConfig.PID != 0 {
@@ -14,6 +18,22 @@ func runHandle() {
 	if err != nil {
 		log.Fatalln("[cmd] write pid to config file error:", err)
 	}
+
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGINT)
+
+	go func() {
+		for {
+			sig := <-c
+			switch sig {
+			case syscall.SIGINT:
+				log.Infoln("[signal] server exit!")
+				GlobalConfig.PID = 0
+				configWriter(*config)
+				os.Exit(0)
+			}
+		}
+	}()
 
 	serverHandle()
 }
