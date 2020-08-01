@@ -17,45 +17,45 @@ const (
 
 var (
 	log        = logrus.New()
-	versionStr = "Version: " + version + " (platform: " + runtime.GOOS + "-" + runtime.GOARCH + ")"
+	versionStr = "Version: " + version + " (platform: " + runtime.GOOS + "-" + runtime.GOARCH + ")."
 
-	debug  = kingpin.Flag("debug", "set log level to 'debug'").Short('d').Default("false").Bool()
-	config = kingpin.Flag("config", "set config database").Short('c').Default("config.json").String()
+	debug  = kingpin.Flag("debug", "Set log level to 'debug'.").Short('d').Default("false").Bool()
+	config = kingpin.Flag("config", "special configuration file.").Short('c').Default("config.json").String()
 
-	initCmd   = kingpin.Command("init", "create a initial copy of config file")
-	initForce = initCmd.Flag("force", "force to overwrite config file").Short('f').Default("false").Bool()
+	initCmd   = kingpin.Command("init", "Create a initial copy of configuration file.")
+	initForce = initCmd.Flag("force", "Force to overwrite configuration file.").Short('f').Default("false").Bool()
 
-	showCmd = kingpin.Command("show", "show the config file")
+	showCmd = kingpin.Command("show", "Show the configuration file.")
 
-	setCmd   = kingpin.Command("set", "change settings in config file")
-	setKey   = setCmd.Arg("key", "keywords could be one of `server`, `timeout`, `secure_url`, `fallback_url`, `cert` and `key`").String()
+	setCmd   = kingpin.Command("set", "Change settings in configuration file.")
+	setKey   = setCmd.Arg("key", "Keywords could be one of `server`, `timeout`, `secure_url`, `fallback_url`, `cert` and `key`.").String()
 	setValue = setCmd.Arg("value", "").String()
 
-	userAddCmd      = kingpin.Command("user-add", "create a new user")
-	userAddUsername = userAddCmd.Arg("username", "username").Required().String()
-	userAddPassword = userAddCmd.Arg("password", "password").Required().String()
-	userAddQuota    = userAddCmd.Arg("quota", "quota ( 0 for no limitation.").Default("0").Int()
-	userAddForce    = userAddCmd.Flag("force", "force to add or update a user").Short('f').Default("false").Bool()
+	userAddCmd      = kingpin.Command("user-add", "Create a new user.")
+	userAddUsername = userAddCmd.Arg("username", "Username.").Required().String()
+	userAddPassword = userAddCmd.Arg("password", "Password.").Required().String()
+	userAddQuota    = userAddCmd.Arg("quota", "Quota ( 0 for no limitation.").Default("0").Int()
+	userAddForce    = userAddCmd.Flag("force", "Force to add or update a user.").Short('f').Default("false").Bool()
 
-	userDelCmd      = kingpin.Command("user-del", "delete user(s)")
-	userDelUsername = userDelCmd.Arg("username", "username").String()
-	userDelAll      = userDelCmd.Flag("all", "use `-a` to clear the Users list.").Short('a').Default("false").Bool()
+	userDelCmd      = kingpin.Command("user-del", "Delete user(s).")
+	userDelUsername = userDelCmd.Arg("username", "Username.").String()
+	userDelAll      = userDelCmd.Flag("all", "Use `-a` to clear the Users list.").Short('a').Default("false").Bool()
 
-	aclAddCmd        = kingpin.Command("acl-add", "insert a new rule into ACL")
-	aclAddCmdIndex   = aclAddCmd.Flag("index", "index number to insert a new rule").Short('i').Default("-1").Int()
-	aclAddCmdContext = aclAddCmd.Arg("context", "domain:port or IP:port or CIDR. Example: `192.168.0.0/16`, `google.com`, `1.2.3.4:443` or `baidu.com:443`").Required().String()
-	aclAddCmdAction  = aclAddCmd.Arg("action", "one of the 'allow' or 'deny'").Required().String()
+	aclAddCmd        = kingpin.Command("acl-add", "Insert a new rule into ACL.")
+	aclAddCmdIndex   = aclAddCmd.Flag("index", "Index number to insert a new rule.").Short('i').Default("-1").Int()
+	aclAddCmdContext = aclAddCmd.Arg("context", "Rule details. domain:port or IP:port or CIDR. Example: `192.168.0.0/16`, `google.com`, `1.2.3.4:443` or `baidu.com:443`.").Required().String()
+	aclAddCmdAction  = aclAddCmd.Arg("action", "One of the 'allow' or 'deny'.").Required().String()
 
-	aclDelCmd      = kingpin.Command("acl-del", "delete a rule from ACL")
-	aclDelCmdAll   = aclDelCmd.Flag("all", "clear all rules in ACL").Short('a').Default("false").Bool()
-	aclDelCmdIndex = aclDelCmd.Arg("index", "index number to delete a rule. Default is to delete the last rule").Default("-1").Int()
+	aclDelCmd      = kingpin.Command("acl-del", "Delete a rule from ACL.")
+	aclDelCmdAll   = aclDelCmd.Flag("all", "Clear all rules in ACL.").Short('a').Default("false").Bool()
+	aclDelCmdIndex = aclDelCmd.Arg("index", "Index number to delete a rule. Default is to delete the last rule.").Default("-1").Int()
 
-	aclListCmd = kingpin.Command("acl-list", "show the ACL list")
+	aclListCmd = kingpin.Command("acl-list", "Show the ACL list.")
 
-	runCmd    = kingpin.Command("run", "run the wickproxy server")
-	runServer = runCmd.Arg("server", "server address.").String()
+	runCmd    = kingpin.Command("run", "Run the wickproxy server.")
+	runServer = runCmd.Arg("server", "Server address. Example: `0.0.0.0:7890`.").String()
 
-	versionCMD = kingpin.Command("version", "print the version")
+	versionCMD = kingpin.Command("version", "Print the version and platforms.")
 )
 
 func logInit(loglevel logrus.Level) {
@@ -158,9 +158,9 @@ func setHandle() {
 		GlobalConfig.SecureURL = *setValue
 	case "fallback_url":
 		GlobalConfig.FallbackURL = *setValue
-	case "cert":
+	case "tls_cert":
 		GlobalConfig.TLS.Certificate = *setValue
-	case "key":
+	case "tls_key":
 		GlobalConfig.TLS.CertificateKey = *setValue
 	default:
 		log.Fatalln("[cmd] no such key:", *setKey)
