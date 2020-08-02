@@ -5,10 +5,15 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 )
 
 const defaultServer = "0.0.0.0:7890"
+
+var (
+	currentServer *http.Server
+)
 
 type proxyServer struct{}
 
@@ -27,19 +32,41 @@ func getServer() string {
 }
 
 func serverHandle() {
-	var err error
 
+	// lock PID lock
+	if GlobalConfig.PID != 0 {
+		log.Fatalln("[cmd] there is a wickproxy running. quit!")
+	}
+
+	GlobalConfig.PID = os.Getpid()
+	err := configWriter(*config)
+	if err != nil {
+		log.Fatalln("[cmd] write pid to config file error:", err)
+	}
+
+	// pool initial
 	poolInit()
 
 	server := getServer()
 	log.Infoln("[server] listen at:", server)
 
+	currentServer = &http.Server{Addr: server, Handler: &proxyServer{}}
 	if GlobalConfig.TLS.Certificate != "" && GlobalConfig.TLS.CertificateKey != "" {
-		err = http.ListenAndServeTLS(server, GlobalConfig.TLS.Certificate, GlobalConfig.TLS.CertificateKey, &proxyServer{})
+		err = currentServer.ListenAndServeTLS(GlobalConfig.TLS.Certificate, GlobalConfig.TLS.CertificateKey)
 	} else {
-		err = http.ListenAndServe(server, &proxyServer{})
+		err = currentServer.ListenAndServe()
 	}
-	log.Fatalln("[server] server fatal:", err)
+
+	if err != nil {
+		log.Infoln("[server] server closed:", err)
+	}
+
+	// unlock PID
+	GlobalConfig.PID = 0
+	err = configWriter(*config)
+	if err != nil {
+		log.Infoln("[server] failed to unlock PID")
+	}
 }
 
 func defaultServerHandler(w http.ResponseWriter, req *http.Request) {

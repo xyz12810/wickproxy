@@ -27,9 +27,7 @@ go build -o build/wickporxy .
 
 Or to use `Make`:
 ```
-make linux      # to build for Linux amd64 platform
-make darwin     # to build for OSX amd64 platform
-make windows    # to build for Windows amd64 platform
+make <platform>       # to build for special platform. Including: linux-amd64, linux-arm64 , darwin-amd64, windows-x64, windows-x86 and freebsd-amd64
 make all        # to build for all three platforms
 ```
 

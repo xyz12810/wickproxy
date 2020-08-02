@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -12,14 +11,9 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
-const (
-	version = "v0.1.2-beta"
-)
-
 var (
-	log        = logrus.New()
-	versionStr = "Version: " + version + " (platform: " + runtime.GOOS + "-" + runtime.GOARCH + ")."
-	logFile    os.File
+	log     = logrus.New()
+	logFile os.File
 
 	debug  = kingpin.Flag("debug", "Set log level to 'debug'.").Short('d').Default("false").Bool()
 	config = kingpin.Flag("config", "special configuration file.").Short('c').Default("config.json").String()
@@ -61,6 +55,7 @@ var (
 	startCmd   = kingpin.Command("start", "Run the wickproxy server as daemon service.")
 	stopCmd    = kingpin.Command("stop", "stop a wickproxy  service. (Unix only)")
 	reloadCmd  = kingpin.Command("reload", "reload configuration file. (Unix only)")
+	unlockCmd  = kingpin.Command("unlock", "to unlock PID lock in configuration file")
 	versionCMD = kingpin.Command("version", "Print the version and platforms.")
 )
 
@@ -71,7 +66,7 @@ func logInit(loglevel logrus.Level, logf string, cmd string) {
 		logf = GlobalConfig.Logging
 	}
 
-	if logf == "" {
+	if logf == "" || logf == "stdout" {
 		log.SetOutput(os.Stdout)
 		log.SetFormatter(&logrus.TextFormatter{
 			ForceColors:               true,
@@ -143,6 +138,8 @@ func main() {
 		startHandle()
 	case stopCmd.FullCommand(), reloadCmd.FullCommand():
 		signHandle(cmd)
+	case unlockCmd.FullCommand():
+		unlockHandle()
 	case versionCMD.FullCommand():
 		versionHandler()
 	}
@@ -218,9 +215,18 @@ func setHandle() {
 
 	err := configWriter(*config)
 	if err != nil {
-		log.Fatal("[set] write to file error:", err)
+		log.Fatalln("[set] write to file error:", err)
 	}
 	log.Debugf("[set] config changed: set %v = %v\n", *setKey, *setValue)
+}
+
+func unlockHandle() {
+	GlobalConfig.PID = 0
+	err := configWriter(*config)
+	if err != nil {
+		log.Fatalln("[unlock] write to configuration file error:", err)
+	}
+	log.Debugln("[unlock] server unlocked")
 }
 
 func useraddHandle() {

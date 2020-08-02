@@ -3,21 +3,19 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/sirupsen/logrus"
+)
+
+var (
+	restartSig = make(chan bool)
 )
 
 func runHandle() {
-	if GlobalConfig.PID != 0 {
-		log.Fatalln("[cmd] there is a wickproxy running. quit!")
-	}
-
-	GlobalConfig.PID = os.Getpid()
-	err := configWriter(*config)
-	if err != nil {
-		log.Fatalln("[cmd] write pid to config file error:", err)
-	}
 
 	// Signal Process
 	c := make(chan os.Signal)
@@ -33,17 +31,36 @@ func runHandle() {
 				configWriter(*config)
 				os.Exit(0)
 			case syscall.SIGUSR2:
+				// reload configuration file
 				log.Infoln("[signal] reload configuration file")
 				err := configReader(*config)
 				if err != nil {
 					log.Infoln("[cmd] reload configuration file found error:", err)
 					return
 				}
+
+				// reload logging
+				if *debug == true {
+					logInit(logrus.DebugLevel, *logf, runCmd.FullCommand())
+				} else {
+					logInit(logrus.InfoLevel, *logf, runCmd.FullCommand())
+				}
+
+				// restart server
+				if currentServer != nil {
+					log.Infoln("[signal] shotdown server ...")
+					ctx := new(context.Context)
+					if err := currentServer.Shutdown(*ctx); err != nil {
+						log.Fatalln("[signal] shutdown server error,", err)
+					}
+				}
 			}
 		}
 	}()
 
-	serverHandle()
+	for {
+		serverHandle()
+	}
 }
 
 func signHandle(cmd string) {
