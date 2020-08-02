@@ -106,19 +106,6 @@ func serveHijack(w http.ResponseWriter, targetConn net.Conn) (int, error) {
 }
 
 func dial(hostport string) (outbound net.Conn, err error) {
-	host, port, err := net.SplitHostPort(hostport)
-	if err != nil {
-		return nil, err
-	}
-
-	if !aclPrivateCheck(host) {
-		return nil, errors.New("ACL failed, private IP address: " + host)
-	}
-
-	if !aclCheck(host, port) {
-		return nil, errors.New("ACL failed, host invalid: " + hostport)
-	}
-
 	if GlobalConfig.Timeout > 0 {
 		outbound, err = net.DialTimeout("tcp", hostport, GlobalConfig.Timeout*time.Second)
 	} else {

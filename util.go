@@ -61,3 +61,17 @@ func removeHopByHop(header http.Header) {
 		header.Del(h)
 	}
 }
+
+func checkWhiteList(host string) (ret bool) {
+	if GlobalConfig.SecureURL != "" && GlobalConfig.SecureURL == host {
+		return true
+	}
+
+	wurls := strings.Split(GlobalConfig.WhiteListURL, " ")
+	for _, wurl := range wurls {
+		if host == wurl {
+			return true
+		}
+	}
+	return false
+}

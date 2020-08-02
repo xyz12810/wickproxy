@@ -79,19 +79,25 @@ func serverHandle() {
 
 func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 
+	var host, port, hostport string
+	hostport = req.URL.Host
+	if hostport == "" {
+		hostport = req.Host
+	}
+	host, port, err := net.SplitHostPort(hostport)
+	if err != nil {
+		host = hostport
+		if req.URL.Scheme == "https" {
+			port = "443"
+		} else {
+			port = "80"
+		}
+	}
+
 	// Authenticate
 	ret, emptyAuth, username := authenticate(w, req)
 	if emptyAuth {
-		hostport := req.URL.Host
-		if hostport == "" {
-			hostport = req.Host
-		}
-		host, _, err := net.SplitHostPort(hostport)
-		if err != nil {
-			host = hostport
-		}
-
-		if GlobalConfig.SecureURL == "" || (GlobalConfig.SecureURL == host) {
+		if checkWhiteList(host) {
 			error407Handle(w, req)
 			return
 		}
@@ -101,16 +107,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 
 	// Authenticate Failed
 	if ret == false {
-		hostport := req.URL.Host
-		if hostport == "" {
-			hostport = req.Host
-		}
-		host, _, err := net.SplitHostPort(hostport)
-		if err != nil {
-			host = hostport
-		}
-
-		if GlobalConfig.SecureURL == "" || (GlobalConfig.SecureURL == host) {
+		if checkWhiteList(host) {
 			error403Handle(w, req, errors.New("Authenticate Failed"))
 			return
 		}
@@ -118,16 +115,18 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Access Control List check
+	if !aclPrivateCheck(host) {
+		error502Handle(w, req, err)
+		return
+	}
+	if !aclCheck(host, port) {
+		error502Handle(w, req, err)
+		return
+	}
+
 	// visit secureURL
-	host1 := req.URL.Host
-	if host1 == "" {
-		host1 = req.Host
-	}
-	host2, _, err := net.SplitHostPort(host1)
-	if err != nil {
-		host2 = host1
-	}
-	if GlobalConfig.SecureURL != "" && GlobalConfig.SecureURL == host2 {
+	if GlobalConfig.SecureURL != "" && GlobalConfig.SecureURL == host {
 		errorPassHandle(w, req)
 		return
 	}
@@ -174,29 +173,7 @@ func authenticate(w http.ResponseWriter, req *http.Request) (ret, emptyAuth bool
 func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 	var err error
 
-	// step 0: outbound host
-
-	host1 := req.URL.Host
-	if host1 == "" {
-		host1 = req.Host
-	}
-	host, port, err := net.SplitHostPort(host1)
-	if err != nil {
-		host = host1
-		if req.URL.Scheme == "https" {
-			port = "443"
-		} else {
-			port = "80"
-		}
-	}
-	if err == nil {
-		if !aclCheck(host, port) {
-			error502Handle(w, req, err)
-			return
-		}
-	}
-
-	// step 2: build request
+	// step 1: build request
 	transport := http.DefaultTransport
 	outReq := new(http.Request)
 	outReq = req.Clone(req.Context())
