@@ -9,6 +9,14 @@ import (
 func proxyAuth(r *http.Request) (username, password string, ok bool) {
 	auth := r.Header.Get("Proxy-Authorization")
 	if auth == "" {
+		if r.URL.User.Username() != "" {
+			user := r.URL.User.Username()
+			pass, isPass := r.URL.User.Password()
+			if isPass {
+				return user, pass, true
+			}
+			return user, "", true
+		}
 		return
 	}
 	return parseBasicAuth(auth)
