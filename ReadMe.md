@@ -54,13 +54,14 @@ Use `wickproxy init` to create a new copy of configuration file and use `wickpro
 
 Use `wickproxy set [key] [value]` command to change. These keys are available:
 
-> * server:     The address wickproxy will listen to. Default is `127.0.0.1:7890`
-> * logging:    Wickproxy will write log into `logging` file. It is only enabled in `run` or `start` command.
-> * timeout:    Wickproxy will try to wait `timeout` seconds when connect to the next hop.
-> * secure_url: When `secure_url` is not none, only requests to `secure_url` will trick a 407 proxy-authentication response. It is used to hide as a proxy server. Example: `whtql.secure.com`
-> * fallback_url: When `fallback_url` is not none, wickproxy will rewrite all illegal requests to `fallback_url`. Wickproxy will camouflage itself as a nginx server when `fallback_url` is none.
-> * tls_cert: To specify tls certificate. Wickproxy will use `TLS` when `tls_cert` and `tls_key` are not none.
-> * tls_key: To specify tls private key. Wickproxy will use `TLS` when `tls_cert` and `tls_key` are not none.
+* server:       The address wickproxy will listen to. Default is `127.0.0.1:7890`
+* logging:      Wickproxy will write log into `logging` file. It is only enabled in `run` or `start` command.
+* timeout:      Wickproxy will try to wait `timeout` seconds when connect to the next hop.
+* http2: to enable http2 mode.Default is `false`. **`http2` is not compatible with `fallback_url`**
+* secure_url:   When `secure_url` is not none, only requests to `secure_url` will trick a 407 proxy-authentication response. It is used to hide as a proxy server. Example: `whtql.secure.com`
+* fallback_url: When `fallback_url` is not none, wickproxy will rewrite all illegal requests to `fallback_url`. Wickproxy will camouflage itself as a nginx server when `fallback_url` is none.
+* tls_cert:     To specify tls certificate. Wickproxy will use `TLS` when `tls_cert` and `tls_key` are not none.
+* tls_key:      To specify tls private key. Wickproxy will use `TLS` when `tls_cert` and `tls_key` are not none.
 
 ### User configuration file
 
@@ -94,65 +95,8 @@ wickproxy acl-del -a # clear the ACL.
 ```
 
 ### Help
-Use `wickproxy help` to get help:
+
 ```
-Usage: Wickproxy [<flags>] <command> [<args> ...]
-
-Wickproxy is a security HTTP(s) proxy for all platforms. Version: 0.0.1 (platform: darwin-amd64).
-
-Flags:
-      --help                  Show context-sensitive help (also try --help-long and --help-man).
-  -d, --debug                 Set log level to 'debug'.
-  -c, --config="config.json"  special configuration file.
-  -l, --log=LOG               logging file
-      --version               Show application version.
-
-Commands:
-  help [<command>...]
-    Show help.
-
-
-  init [<flags>]
-    Create a initial copy of configuration file.
-
-    -f, --force  Force to overwrite configuration file.
-
-  show
-    Show the configuration file.
-
-
-  set [<key>] [<value>]
-    Change settings in configuration file. `key` could be one of `server`, `timeout`, `secure_url`, `fallback_url`, `tls_cert` and `tls_key`.
-
-
-  user-add [<flags>] <username> <password> [<quota>]
-    Create a new user.
-
-    -f, --force  Force to add or update a user.
-
-  user-del [<flags>] [<username>]
-    Delete user(s).
-
-    -a, --all  Use `-a` to clear the Users list.
-
-  acl-add [<flags>] <context> <action>
-    Insert a new rule into ACL.
-
-    -i, --index=-1  Index number to insert a new rule.
-
-  acl-del [<flags>] [<index>]
-    Delete a rule from ACL.
-
-    -a, --all  Clear all rules in ACL.
-
-  acl-list
-    Show the ACL list.
-
-
-  run [<server>]
-    Run the wickproxy server.
-
-
-  version
-    Print the version and platforms.
+wickproxy version # get version and platform information
+wickproxy help    # get help manual
 ```

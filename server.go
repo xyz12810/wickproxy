@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"io"
 	"net"
@@ -35,7 +36,7 @@ func serverHandle() {
 
 	// lock PID lock
 	if GlobalConfig.PID != 0 {
-		log.Fatalln("[cmd] there is a wickproxy running. quit!")
+		log.Fatalln("[cmd] there is a wickproxy running. quit! If wickproxy has quit by accident, use `wickproxy unlock`.")
 	}
 
 	GlobalConfig.PID = os.Getpid()
@@ -50,7 +51,14 @@ func serverHandle() {
 	server := getServer()
 	log.Infoln("[server] listen at:", server)
 
-	currentServer = &http.Server{Addr: server, Handler: &proxyServer{}}
+	currentServer = &http.Server{
+		Addr:    server,
+		Handler: &proxyServer{}}
+
+	if GlobalConfig.HTTP2 == false {
+		currentServer.TLSConfig = &tls.Config{NextProtos: []string{"http/1.1"}}
+	}
+
 	if GlobalConfig.TLS.Certificate != "" && GlobalConfig.TLS.CertificateKey != "" {
 		err = currentServer.ListenAndServeTLS(GlobalConfig.TLS.Certificate, GlobalConfig.TLS.CertificateKey)
 	} else {
@@ -164,8 +172,6 @@ func authenticate(w http.ResponseWriter, req *http.Request) (ret, emptyAuth bool
 
 // handle HTTP Proxy
 func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
-
-	log.Debugln(req.Host, req.URL)
 	var err error
 
 	// step 0: outbound host
