@@ -14,7 +14,7 @@ func runHandle() {
 	}
 
 	GlobalConfig.PID = os.Getpid()
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[cmd] write pid to config file error:", err)
 	}
@@ -29,7 +29,7 @@ func runHandle() {
 			case syscall.SIGINT:
 				log.Infoln("[signal] server exit!")
 				GlobalConfig.PID = 0
-				configWriter(*config)
+				configWriter(*configFlag)
 				os.Exit(0)
 			}
 		}

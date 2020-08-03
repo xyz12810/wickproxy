@@ -1,19 +1,25 @@
 package main
 
 import (
-	"crypto/tls"
 	"errors"
 	"io"
+	oldlog "log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strconv"
+	"time"
+
+	midlog "github.com/improbable-eng/go-httpwares/logging/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const defaultServer = "0.0.0.0:7890"
 
 var (
 	currentServer *http.Server
+	loggerAdapter *oldlog.Logger
 )
 
 type proxyServer struct{}
@@ -48,15 +54,23 @@ func serverHandle() {
 	// pool initial
 	poolInit()
 
+	//logger adapter initial
+	ent := logrus.NewEntry(log)
+	loggerAdapter = midlog.AsHttpLogger(ent)
+
+	// reverse proxy server init
+	reverseProxyHandler2Init()
+
 	server := getServer()
 	log.Infoln("[server] listen at:", server)
 
 	currentServer = &http.Server{
-		Addr:    server,
-		Handler: &proxyServer{}}
-
-	if GlobalConfig.HTTP2 == false {
-		currentServer.TLSConfig = &tls.Config{NextProtos: []string{"http/1.1"}}
+		Addr:         server,
+		Handler:      &proxyServer{},
+		ErrorLog:     loggerAdapter,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  75 * time.Second,
 	}
 
 	if GlobalConfig.TLS.Certificate != "" && GlobalConfig.TLS.CertificateKey != "" {
@@ -142,7 +156,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 
 	// For http proxy
 	if req.Method != http.MethodConnect {
-		httpProxyHandler(w, req)
+		httpProxyHandler2(w, req)
 		return
 	}
 
@@ -204,6 +218,29 @@ func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(res.StatusCode)
 	io.Copy(w, res.Body)
 	res.Body.Close()
+}
+
+func httpProxyHandler2(w http.ResponseWriter, req *http.Request) {
+	if req.URL.Scheme == "" {
+		req.URL.Scheme = "http"
+	}
+	if req.URL.Host == "" {
+		req.URL.Host = req.Host
+	}
+
+	tmpRPHandler := httputil.ReverseProxy{
+		ErrorLog:     loggerAdapter,
+		ErrorHandler: error404Handle,
+		Director: func(req *http.Request) {
+			removeHopByHop(req.Header)
+		},
+		ModifyResponse: func(w *http.Response) error {
+			removeHopByHop(w.Header)
+			return nil
+		},
+	}
+
+	tmpRPHandler.ServeHTTP(w, req)
 }
 
 func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {

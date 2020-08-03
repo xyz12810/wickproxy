@@ -27,7 +27,6 @@ type globalConfig struct {
 	SecureURL   string
 	FallbackURL string
 	WhiteListURL string
-	HTTP2       bool
 
 	Timeout time.Duration
 	Logging string

@@ -39,6 +39,8 @@ const proxyBody = `<html>
 </html>
 `
 
+var rpHandler *httputil.ReverseProxy
+
 // Error Handlers
 func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int, err error) {
 	w.Header().Add("server", fakeServer)
@@ -75,7 +77,7 @@ func errorHandle(w http.ResponseWriter, req *http.Request, code int, err error) 
 
 	if GlobalConfig.FallbackURL != "" {
 		log.Errorf("[server] error(%v): %v\n", code, err)
-		reverseProxyHandler(w, req)
+		reverseProxyHandler2(w, req)
 		return
 	}
 	errorCoreHandle(w, req, code, err)
@@ -202,6 +204,32 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	dualStream(outbound, clientConn, clientConn)
+}
+
+
+func reverseProxyHandler2Init() {
+	rpURL, err := url.Parse(GlobalConfig.FallbackURL)
+	if err != nil {
+		log.Fatalln("[fallback] init reverse proxy server error:", err)
+	}
+	rpHandler = httputil.NewSingleHostReverseProxy(rpURL)
+	rpHandler.ErrorLog = loggerAdapter
+	rpHandler.Director = func (req *http.Request) {
+		req.URL.Scheme = rpURL.Scheme
+		req.URL.Host = rpURL.Host
+		req.Host = rpURL.Host
+		removeHopByHop(req.Header)
+	}
+	rpHandler.ModifyResponse = func(w *http.Response) error {
+		removeHopByHop(w.Header)
+		return nil
+	}
+
+	rpHandler.ErrorHandler = error404Handle
+}
+
+func reverseProxyHandler2(w http.ResponseWriter, req *http.Request) {
+	rpHandler.ServeHTTP(w, req)
 }
 
 // transport := http.DefaultTransport

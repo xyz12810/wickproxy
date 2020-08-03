@@ -210,12 +210,6 @@ func setHandle() {
 		GlobalConfig.TLS.Certificate = *setValue
 	case "tls_key":
 		GlobalConfig.TLS.CertificateKey = *setValue
-	case "http2":
-		if *setValue == "false" {
-			GlobalConfig.HTTP2 = false
-		} else {
-			GlobalConfig.HTTP2 = true
-		}
 	default:
 		log.Fatalln("[cmd] no such key:", *setKey)
 	}

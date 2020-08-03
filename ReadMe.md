@@ -57,8 +57,7 @@ Use `wickproxy set [key] [value]` command to change. These keys are available:
 * server:       The address wickproxy will listen to. Default is `127.0.0.1:7890`
 * logging:      Wickproxy will write log into `logging` file. It is only enabled in `run` or `start` command.
 * timeout:      Wickproxy will try to wait `timeout` seconds when connect to the next hop.
-* http2: to enable http2 mode.Default is `false`. **`http2` is not compatible with `fallback_url`**
-* secure_url:   It is a probe resistance method. When `secure_url` is set, requests to `secure_url` will trick a 407 proxy-authentication response. It is used to hide as a proxy server. Example: `whtql.secure.com`
+* secure_url:   It is a probe resistance method. When `secure_url` is set, requests to `secure_url` will trick a 407 proxy-authentication response. It is used to hide as a proxy server. Example: `whtql.secure.com`.
 * whitelist_url: If probe resistance is enabled, some requests may causes problems( such as `git` or `pip`), requests to `whitelist_url` will also trick a 407 proxy-authentication response for compatibility considerations. Example: `"github.com gitlab.com google.com"`.
 * fallback_url: When `fallback_url` is not none, wickproxy will rewrite all illegal requests to `fallback_url`. Wickproxy will camouflage itself as a nginx server when `fallback_url` is none.
 * tls_cert:     To specify tls certificate. Wickproxy will use `TLS` when `tls_cert` and `tls_key` are not none.
