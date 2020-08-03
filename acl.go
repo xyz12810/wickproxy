@@ -120,7 +120,7 @@ func acllist() {
 
 func aclCheck(host, port string) bool {
 	for _, v := range GlobalConfig.ACL {
-		log.Debugln("[ACL] request:",host,port,"rule:", v)
+		log.Debugln("[ACL] request:", host, port, "rule:", v)
 		if aclMatch(host, port, v) {
 			if v.IsAllow {
 				return true
@@ -136,16 +136,16 @@ func aclMatch(host, port string, rule aclConfig) bool {
 		return false
 	}
 
-	IP := net.ParseIP(host)
-	if IP == nil {
-		if host == rule.Domain {
-			return true
-		}
-		return false
+	IPs, err := net.LookupIP(host)
+	if err != nil {
+		return host == rule.Domain
 	}
 
-	if rule.Addr.Contains(IP) {
-		return true
+	for _, IP := range IPs {
+		if rule.Addr.Contains(IP) {
+			return true
+		}
 	}
-	return false
+
+	return host == rule.Domain
 }

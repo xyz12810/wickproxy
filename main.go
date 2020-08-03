@@ -15,9 +15,9 @@ var (
 	log     = logrus.New()
 	logFile os.File
 
-	debug  = kingpin.Flag("debug", "Set log level to 'debug'.").Short('d').Default("false").Bool()
-	config = kingpin.Flag("config", "special configuration file.").Short('c').Default("config.json").String()
-	logf   = kingpin.Flag("log", "logging file").Short('l').String()
+	debugFlag   = kingpin.Flag("debug", "Set log level to 'debug'.").Short('d').Default("false").Bool()
+	configFlag  = kingpin.Flag("config", "special configuration file.").Short('c').Default("config.json").String()
+	loggingFlag = kingpin.Flag("logging", "logging file").Short('l').String()
 
 	initCmd   = kingpin.Command("init", "Create a initial copy of configuration file.")
 	initForce = initCmd.Flag("force", "Force to overwrite configuration file.").Short('f').Default("false").Bool()
@@ -59,8 +59,13 @@ var (
 	versionCMD = kingpin.Command("version", "Print the version and platforms.")
 )
 
-func logInit(loglevel logrus.Level, logf string, cmd string) {
-	log.SetLevel(loglevel)
+func logInit(cmd string) {
+	if *debugFlag == true {
+		log.SetLevel(logrus.DebugLevel)
+	} else {
+		log.SetLevel(logrus.InfoLevel)
+	}
+	logf := *loggingFlag
 
 	if logf == "" && cmd == runCmd.FullCommand() {
 		logf = GlobalConfig.Logging
@@ -100,19 +105,13 @@ func main() {
 	cmd := kingpin.Parse()
 
 	// Read config
-	err := configReader(*config)
+	err := configReader(*configFlag)
 	if err != nil {
-		log.Println("[cmd] no configuration file found, create one.")
-		initHandle()
-		return
+		log.Fatalln("[cmd] no configuration file found, use `wickproxy init` to create one.")
 	}
 
 	// Logging initial
-	if *debug == true {
-		logInit(logrus.DebugLevel, *logf, cmd)
-	} else {
-		logInit(logrus.InfoLevel, *logf, cmd)
-	}
+	logInit(cmd)
 	defer logFile.Close()
 
 	switch cmd {
@@ -168,14 +167,14 @@ func startHandle() {
 }
 
 func initHandle() {
-	log.Debug("[init] Init config from:", *config)
+	log.Debug("[init] Init config from:", *configFlag)
 
-	if configExists(*config) && !*initForce {
+	if configExists(*configFlag) && !*initForce {
 		log.Panicln("[init] configuration file exists. Use --force true to overwrite it.")
 		return
 	}
 
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[init] write to file error:", err)
 	}
@@ -221,7 +220,7 @@ func setHandle() {
 		log.Fatalln("[cmd] no such key:", *setKey)
 	}
 
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[set] write to file error:", err)
 	}
@@ -230,7 +229,7 @@ func setHandle() {
 
 func unlockHandle() {
 	GlobalConfig.PID = 0
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[unlock] write to configuration file error:", err)
 	}
@@ -263,7 +262,7 @@ func useraddHandle() {
 		log.Debugln("[user] add a new user")
 	}
 
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[user] write to file error:", err)
 	}
@@ -272,7 +271,7 @@ func useraddHandle() {
 func userdelHandle() {
 	if *userDelAll {
 		GlobalConfig.Users = make([]userConfig, 0)
-		err := configWriter(*config)
+		err := configWriter(*configFlag)
 		if err != nil {
 			log.Fatal("[user] write to file error:", err)
 		}
@@ -288,7 +287,7 @@ func userdelHandle() {
 	}
 	GlobalConfig.Users = tmpUsers
 
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[user] write to file error:", err)
 	}
@@ -302,7 +301,7 @@ func acladdHandle() {
 
 	aclAdd(idx, context, action)
 
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[user] write to file error:", err)
 	}
@@ -313,7 +312,7 @@ func acldelHandle() {
 	all := *aclDelCmdAll
 	aclDel(idx, all)
 
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[user] write to file error:", err)
 	}

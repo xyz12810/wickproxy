@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,76 +14,99 @@ import (
 
 const fakeServer = "nginx/1.16.0 (Ubuntu)"
 
-const padding = "<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n<!-- a padding to disable MSIE and Chrome friendly error page -->\n"
+const fakeBody = `<html>
+<head><title>%v</title></head>
+<body bgcolor="white">
+<center><h1>%v</h1></center>
+<hr><center>%v</center>
+</body>
+</html>
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->`
 
-var fakeBody = "<html>\n<head><title>%v %v</title></head>\n<body bgcolor=\"white\">\n<center><h1>%v %v</h1></center>\n<hr><center>%v</center>\n</body>\n</html>\n" + padding
+const proxyBody = `<html>
+<head><title>Wickproxy Proxy Server</title></head>
+<body bgcolor="white">
+<center><h1>Wickproxy Proxy Server</h1></center>
+<\br>
+<center><p>%v</p></center>
+<hr><center>%v</center>
+</body
+</html>
+`
 
-func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int) {
+// Error Handlers
+func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int, err error) {
 	w.Header().Add("server", fakeServer)
 	w.Header().Add("content-type", "text/html")
 
-	statusText := http.StatusText(code)
-	fb := fmt.Sprintf(fakeBody, code, statusText, code, statusText, fakeServer)
+	log.Errorf("[server] error(%v): %v\n", code, err)
+	statusText := fmt.Sprintf("%v %v", code, http.StatusText(code))
+	fb := fmt.Sprintf(fakeBody, statusText, statusText, fakeServer)
 
 	w.WriteHeader(code)
 	w.Write([]byte(fb))
 }
 
 func error403Handle(w http.ResponseWriter, req *http.Request, err error) {
-	log.Errorln("[server] error", http.StatusForbidden, err)
-	errorCoreHandle(w, req, http.StatusForbidden)
+	errorCoreHandle(w, req, http.StatusForbidden, err)
+}
+
+func error404Handle(w http.ResponseWriter, req *http.Request, err error) {
+	errorCoreHandle(w, req, http.StatusNotFound, err)
 }
 
 func error502Handle(w http.ResponseWriter, req *http.Request, err error) {
-	log.Errorln("[server] error", http.StatusBadGateway, err)
-	errorCoreHandle(w, req, http.StatusBadGateway)
+	errorCoreHandle(w, req, http.StatusBadGateway, err)
 }
 
 func error500Handle(w http.ResponseWriter, req *http.Request, err error) {
-	log.Errorln("[server] error", http.StatusInternalServerError, err)
-	errorCoreHandle(w, req, http.StatusInternalServerError)
+	errorCoreHandle(w, req, http.StatusInternalServerError, err)
 }
 
 func errorHandle(w http.ResponseWriter, req *http.Request, code int, err error) {
-
 	if code == 0 {
 		code = http.StatusNotFound
 	}
 
-	log.Errorln("[server] error:", code, err)
 	if GlobalConfig.FallbackURL != "" {
+		log.Errorf("[server] error(%v): %v\n", code, err)
 		reverseProxyHandler(w, req)
 		return
 	}
-	errorCoreHandle(w, req, code)
+	errorCoreHandle(w, req, code, err)
 }
 
-func error407Handle(w http.ResponseWriter, req *http.Request) {
+// Authenticate Proxy Handlers
+func proxy407Handle(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("server", fakeServer)
 	w.Header().Add("content-type", "text/html")
 	w.Header().Add("Proxy-Authenticate", "Basic realm=\"Wickproxy Secure Proxy\"")
 
 	code := http.StatusProxyAuthRequired
-	statusText := http.StatusText(code)
-	fb := fmt.Sprintf(fakeBody, code, statusText, code, statusText, fakeServer)
+	fb := fmt.Sprintf(proxyBody, "Need to authenticate.", fakeServer)
 
 	w.WriteHeader(code)
 	w.Write([]byte(fb))
 }
 
-func errorPassHandle(w http.ResponseWriter, req *http.Request) {
+func proxyPassHandle(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("server", fakeServer)
 	w.Header().Add("content-type", "text/html")
+	w.Header().Add("Proxy-Authenticate", "Basic realm=\"Wickproxy Secure Proxy\"")
 
 	code := http.StatusOK
-	fb := fmt.Sprintf(fakeBody, code, "Authenticate Successful", code, "Authenticate Successful!", fakeServer)
+	fb := fmt.Sprintf(proxyBody, "Authenticate Successfully", fakeServer)
 
 	w.WriteHeader(code)
 	w.Write([]byte(fb))
 }
 
 func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
-
 	// get where to connect
 	var err error
 	var target string
@@ -94,8 +118,7 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 		targetURL, err = url.Parse(GlobalConfig.FallbackURL)
 	}
 	if err != nil {
-		log.Errorln("[fallback] parse fallback url error:", err)
-		errorCoreHandle(w, req, http.StatusNotFound)
+		error404Handle(w, req, errors.New("[fallback] parse fallback url error:"+err.Error()))
 		return
 	}
 
@@ -136,8 +159,7 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	dumpReq, err := httputil.DumpRequest(req, true)
 	if err != nil {
-		log.Errorln("[fallback] dump request failed:", err)
-		errorCoreHandle(w, req, http.StatusNotFound)
+		error404Handle(w, req, errors.New("[fallback] dump request failed: "+err.Error()))
 		return
 	}
 	log.Debugln("[fallback] ", string(dumpReq))
@@ -145,28 +167,25 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 	// rewrite requests to next hop
 	_, err = outbound.Write(dumpReq)
 	if err != nil {
-		log.Errorln("[fallback] rewrite request:", err)
-		errorCoreHandle(w, req, http.StatusNotFound)
+		error404Handle(w, req, errors.New("[fallback] rewrite request: "+err.Error()))
+		return
 	}
 
 	if ProtoMajor == 2 {
-		log.Errorln("[fallback] fallback is not support HTTP2 now. Set http2 to false")
-		errorCoreHandle(w, req, http.StatusNotFound)
+		error404Handle(w, req, errors.New("[fallback] fallback is not support HTTP2 now. Set http2 to false"))
 		return
 	}
 
 	// hijacker
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		log.Errorln("[fallback] server do not support hijacker")
-		errorCoreHandle(w, req, http.StatusNotFound)
+		error404Handle(w, req, errors.New("[fallback] server do not support hijacker"))
 		return
 	}
 
 	clientConn, bufReader, err := hijacker.Hijack()
 	if err != nil {
-		log.Errorln("[fallback] server do not support hijacker:", err)
-		errorCoreHandle(w, req, http.StatusNotFound)
+		error404Handle(w, req, errors.New("[fallback] server do not support hijacker: "+err.Error()))
 		return
 	}
 	defer clientConn.Close()
@@ -176,8 +195,7 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 		if n := bufReader.Reader.Buffered(); n > 0 {
 			rbuf, err := bufReader.Reader.Peek(n)
 			if err != nil {
-				log.Errorln("[fallback] bufReader error:", err)
-				errorCoreHandle(w, req, http.StatusNotFound)
+				error404Handle(w, req, errors.New("[fallback] bufReader error: "+err.Error()))
 				return
 			}
 			outbound.Write(rbuf)

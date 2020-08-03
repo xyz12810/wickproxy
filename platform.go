@@ -7,8 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -28,23 +26,20 @@ func runHandle() {
 			case syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGUSR1:
 				log.Infoln("[signal] server exit!")
 				GlobalConfig.PID = 0
-				configWriter(*config)
+				configWriter(*configFlag)
+				logFile.Close()
 				os.Exit(0)
 			case syscall.SIGUSR2:
 				// reload configuration file
 				log.Infoln("[signal] reload configuration file")
-				err := configReader(*config)
+				err := configReader(*configFlag)
 				if err != nil {
 					log.Infoln("[cmd] reload configuration file found error:", err)
 					return
 				}
 
 				// reload logging
-				if *debug == true {
-					logInit(logrus.DebugLevel, *logf, runCmd.FullCommand())
-				} else {
-					logInit(logrus.InfoLevel, *logf, runCmd.FullCommand())
-				}
+				logInit(runCmd.FullCommand())
 
 				// restart server
 				if currentServer != nil {

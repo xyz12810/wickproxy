@@ -40,7 +40,7 @@ func serverHandle() {
 	}
 
 	GlobalConfig.PID = os.Getpid()
-	err := configWriter(*config)
+	err := configWriter(*configFlag)
 	if err != nil {
 		log.Fatalln("[cmd] write pid to config file error:", err)
 	}
@@ -71,7 +71,7 @@ func serverHandle() {
 
 	// unlock PID
 	GlobalConfig.PID = 0
-	err = configWriter(*config)
+	err = configWriter(*configFlag)
 	if err != nil {
 		log.Infoln("[server] failed to unlock PID")
 	}
@@ -98,7 +98,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 	ret, emptyAuth, username := authenticate(w, req)
 	if emptyAuth {
 		if checkWhiteList(host) {
-			error407Handle(w, req)
+			proxy407Handle(w, req)
 			return
 		}
 		errorHandle(w, req, http.StatusNotFound, errors.New("Empty Proxy-Authorization"))
@@ -127,7 +127,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 
 	// visit secureURL
 	if GlobalConfig.SecureURL != "" && GlobalConfig.SecureURL == host {
-		errorPassHandle(w, req)
+		proxyPassHandle(w, req)
 		return
 	}
 
