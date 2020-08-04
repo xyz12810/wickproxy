@@ -1,15 +1,11 @@
 package main
 
 import (
-	"crypto/tls"
-	"errors"
 	"fmt"
-	"net"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strings"
-	"time"
 )
 
 const fakeServer = "nginx/1.16.0 (Ubuntu)"
@@ -88,7 +84,7 @@ func proxy407Handle(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("server", fakeServer)
 	w.Header().Add("content-type", "text/html")
 	w.Header().Add("Proxy-Authenticate", "Basic realm=\"Wickproxy Secure Proxy\"")
-
+	responsePadding(w)
 	code := http.StatusProxyAuthRequired
 	fb := fmt.Sprintf(proxyBody, "Need to authenticate.", fakeServer)
 
@@ -100,7 +96,7 @@ func proxyPassHandle(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("server", fakeServer)
 	w.Header().Add("content-type", "text/html")
 	w.Header().Add("Proxy-Authenticate", "Basic realm=\"Wickproxy Secure Proxy\"")
-
+	responsePadding(w)
 	code := http.StatusOK
 	fb := fmt.Sprintf(proxyBody, "Authenticate Successfully", fakeServer)
 
@@ -108,104 +104,103 @@ func proxyPassHandle(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte(fb))
 }
 
-func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
-	// get where to connect
-	var err error
-	var target string
-	var targetURL *url.URL
+// func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
+// 	// get where to connect
+// 	var err error
+// 	var target string
+// 	var targetURL *url.URL
 
-	if !strings.HasPrefix(GlobalConfig.FallbackURL, "http") {
-		targetURL, err = url.Parse("http://" + GlobalConfig.FallbackURL)
-	} else {
-		targetURL, err = url.Parse(GlobalConfig.FallbackURL)
-	}
-	if err != nil {
-		error404Handle(w, req, errors.New("[fallback] parse fallback url error:"+err.Error()))
-		return
-	}
+// 	if !strings.HasPrefix(GlobalConfig.FallbackURL, "http") {
+// 		targetURL, err = url.Parse("http://" + GlobalConfig.FallbackURL)
+// 	} else {
+// 		targetURL, err = url.Parse(GlobalConfig.FallbackURL)
+// 	}
+// 	if err != nil {
+// 		error404Handle(w, req, errors.New("[fallback] parse fallback url error:"+err.Error()))
+// 		return
+// 	}
 
-	if targetURL.Port() == "" {
-		if targetURL.Scheme == "https" {
-			target = net.JoinHostPort(targetURL.Host, "443")
-		} else {
-			target = net.JoinHostPort(targetURL.Host, "80")
-		}
-	} else {
-		target = targetURL.Host
-	}
+// 	if targetURL.Port() == "" {
+// 		if targetURL.Scheme == "https" {
+// 			target = net.JoinHostPort(targetURL.Host, "443")
+// 		} else {
+// 			target = net.JoinHostPort(targetURL.Host, "80")
+// 		}
+// 	} else {
+// 		target = targetURL.Host
+// 	}
 
-	log.Debugln("[fallback] proxy to", targetURL.Scheme, target)
+// 	log.Debugln("[fallback] proxy to", targetURL.Scheme, target)
 
-	// connect to the next hop
-	var outbound net.Conn
-	if targetURL.Scheme == "https" {
-		cfg := tls.Config{}
-		outbound, err = tls.Dial("tcp", target, &cfg)
-	} else if GlobalConfig.Timeout > 0 {
-		outbound, err = net.DialTimeout("tcp", target, GlobalConfig.Timeout*time.Second)
-	} else {
-		outbound, err = net.Dial("tcp", target)
-	}
+// 	// connect to the next hop
+// 	var outbound net.Conn
+// 	if targetURL.Scheme == "https" {
+// 		cfg := tls.Config{}
+// 		outbound, err = tls.Dial("tcp", target, &cfg)
+// 	} else if GlobalConfig.Timeout > 0 {
+// 		outbound, err = net.DialTimeout("tcp", target, GlobalConfig.Timeout*time.Second)
+// 	} else {
+// 		outbound, err = net.Dial("tcp", target)
+// 	}
 
-	// dump this request
-	ProtoMajor := req.ProtoMajor
-	req.Host = targetURL.Host
-	req.ProtoMajor = 1
-	req.ProtoMinor = 1
-	req.Proto = "HTTP/1.1"
-	if req.URL.Host == "" {
-		req.URL.Host = req.Host
-	}
-	if req.URL.Scheme == "" {
-		req.URL.Scheme = "http"
-	}
-	dumpReq, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		error404Handle(w, req, errors.New("[fallback] dump request failed: "+err.Error()))
-		return
-	}
-	log.Debugln("[fallback] ", string(dumpReq))
+// 	// dump this request
+// 	ProtoMajor := req.ProtoMajor
+// 	req.Host = targetURL.Host
+// 	req.ProtoMajor = 1
+// 	req.ProtoMinor = 1
+// 	req.Proto = "HTTP/1.1"
+// 	if req.URL.Host == "" {
+// 		req.URL.Host = req.Host
+// 	}
+// 	if req.URL.Scheme == "" {
+// 		req.URL.Scheme = "http"
+// 	}
+// 	dumpReq, err := httputil.DumpRequest(req, true)
+// 	if err != nil {
+// 		error404Handle(w, req, errors.New("[fallback] dump request failed: "+err.Error()))
+// 		return
+// 	}
+// 	log.Debugln("[fallback] ", string(dumpReq))
 
-	// rewrite requests to next hop
-	_, err = outbound.Write(dumpReq)
-	if err != nil {
-		error404Handle(w, req, errors.New("[fallback] rewrite request: "+err.Error()))
-		return
-	}
+// 	// rewrite requests to next hop
+// 	_, err = outbound.Write(dumpReq)
+// 	if err != nil {
+// 		error404Handle(w, req, errors.New("[fallback] rewrite request: "+err.Error()))
+// 		return
+// 	}
 
-	if ProtoMajor == 2 {
-		error404Handle(w, req, errors.New("[fallback] fallback is not support HTTP2 now. Set http2 to false"))
-		return
-	}
+// 	if ProtoMajor == 2 {
+// 		error404Handle(w, req, errors.New("[fallback] fallback is not support HTTP2 now. Set http2 to false"))
+// 		return
+// 	}
 
-	// hijacker
-	hijacker, ok := w.(http.Hijacker)
-	if !ok {
-		error404Handle(w, req, errors.New("[fallback] server do not support hijacker"))
-		return
-	}
+// 	// hijacker
+// 	hijacker, ok := w.(http.Hijacker)
+// 	if !ok {
+// 		error404Handle(w, req, errors.New("[fallback] server do not support hijacker"))
+// 		return
+// 	}
 
-	clientConn, bufReader, err := hijacker.Hijack()
-	if err != nil {
-		error404Handle(w, req, errors.New("[fallback] server do not support hijacker: "+err.Error()))
-		return
-	}
-	defer clientConn.Close()
+// 	clientConn, bufReader, err := hijacker.Hijack()
+// 	if err != nil {
+// 		error404Handle(w, req, errors.New("[fallback] server do not support hijacker: "+err.Error()))
+// 		return
+// 	}
+// 	defer clientConn.Close()
 
-	if bufReader != nil {
-		// snippet borrowed from `proxy` plugin
-		if n := bufReader.Reader.Buffered(); n > 0 {
-			rbuf, err := bufReader.Reader.Peek(n)
-			if err != nil {
-				error404Handle(w, req, errors.New("[fallback] bufReader error: "+err.Error()))
-				return
-			}
-			outbound.Write(rbuf)
-		}
-	}
-	dualStream(outbound, clientConn, clientConn)
-}
-
+// 	if bufReader != nil {
+// 		// snippet borrowed from `proxy` plugin
+// 		if n := bufReader.Reader.Buffered(); n > 0 {
+// 			rbuf, err := bufReader.Reader.Peek(n)
+// 			if err != nil {
+// 				error404Handle(w, req, errors.New("[fallback] bufReader error: "+err.Error()))
+// 				return
+// 			}
+// 			outbound.Write(rbuf)
+// 		}
+// 	}
+// 	dualStream(outbound, clientConn, clientConn)
+// }
 
 func reverseProxyHandler2Init() {
 	rpURL, err := url.Parse(GlobalConfig.FallbackURL)
@@ -214,7 +209,7 @@ func reverseProxyHandler2Init() {
 	}
 	rpHandler = httputil.NewSingleHostReverseProxy(rpURL)
 	rpHandler.ErrorLog = loggerAdapter
-	rpHandler.Director = func (req *http.Request) {
+	rpHandler.Director = func(req *http.Request) {
 		req.URL.Scheme = rpURL.Scheme
 		req.URL.Host = rpURL.Host
 		req.Host = rpURL.Host
@@ -230,6 +225,23 @@ func reverseProxyHandler2Init() {
 
 func reverseProxyHandler2(w http.ResponseWriter, req *http.Request) {
 	rpHandler.ServeHTTP(w, req)
+}
+
+// Fork from klzgrad/forwardprox
+func responsePadding(w http.ResponseWriter) {
+	paddingLen := rand.Intn(32) + 30
+	padding := make([]byte, paddingLen)
+	bits := rand.Uint64()
+	for i := 0; i < 16; i++ {
+		// Codes that won't be Huffman coded.
+		padding[i] = "!#$()+<>?@[]^`{}"[bits&15]
+		bits >>= 4
+	}
+	for i := 16; i < paddingLen; i++ {
+		padding[i] = '~'
+	}
+	w.Header().Set("Padding", string(padding))
+	w.Header().Add("server", fakeServer)
 }
 
 // transport := http.DefaultTransport

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"io"
 	oldlog "log"
 	"net"
 	"net/http"
@@ -161,7 +160,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// For http(s)(2) proxy
-	httpsProxyHandle(w, req)
+	httpsProxyHandle2(w, req)
 	return
 }
 
@@ -184,41 +183,41 @@ func authenticate(w http.ResponseWriter, req *http.Request) (ret, emptyAuth bool
 }
 
 // handle HTTP Proxy
-func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
-	var err error
+// func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
+// 	var err error
 
-	// step 1: build request
-	transport := http.DefaultTransport
-	outReq := new(http.Request)
-	outReq = req.Clone(req.Context())
-	if outReq.URL.Scheme == "" {
-		outReq.URL.Scheme = "http"
-	}
-	if outReq.URL.Host == "" {
-		outReq.URL.Host = outReq.Host
-	}
-	outReq.Proto = "HTTP/1.1"
-	outReq.ProtoMajor = 1
-	outReq.ProtoMinor = 1
-	removeHopByHop(outReq.Header)
+// 	// step 1: build request
+// 	transport := http.DefaultTransport
+// 	outReq := new(http.Request)
+// 	outReq = req.Clone(req.Context())
+// 	if outReq.URL.Scheme == "" {
+// 		outReq.URL.Scheme = "http"
+// 	}
+// 	if outReq.URL.Host == "" {
+// 		outReq.URL.Host = outReq.Host
+// 	}
+// 	outReq.Proto = "HTTP/1.1"
+// 	outReq.ProtoMajor = 1
+// 	outReq.ProtoMinor = 1
+// 	removeHopByHop(outReq.Header)
 
-	res, err := transport.RoundTrip(outReq)
-	if err != nil {
-		error500Handle(w, req, err)
-		return
-	}
+// 	res, err := transport.RoundTrip(outReq)
+// 	if err != nil {
+// 		error500Handle(w, req, err)
+// 		return
+// 	}
 
-	removeHopByHop(res.Header)
-	for key, value := range res.Header {
-		for _, v := range value {
-			w.Header().Add(key, v)
-		}
-	}
+// 	removeHopByHop(res.Header)
+// 	for key, value := range res.Header {
+// 		for _, v := range value {
+// 			w.Header().Add(key, v)
+// 		}
+// 	}
 
-	w.WriteHeader(res.StatusCode)
-	io.Copy(w, res.Body)
-	res.Body.Close()
-}
+// 	w.WriteHeader(res.StatusCode)
+// 	io.Copy(w, res.Body)
+// 	res.Body.Close()
+// }
 
 func httpProxyHandler2(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Scheme == "" {
@@ -243,10 +242,90 @@ func httpProxyHandler2(w http.ResponseWriter, req *http.Request) {
 	tmpRPHandler.ServeHTTP(w, req)
 }
 
-func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
+// func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
+// 	hostPort := req.URL.Host
+// 	Port := req.URL.Port()
+// 	if Port == "" {
+// 		if req.URL.Scheme == "http" {
+// 			hostPort = net.JoinHostPort(hostPort, "80")
+// 		} else {
+// 			hostPort = net.JoinHostPort(hostPort, "443")
+// 		}
+// 	}
+
+// 	outbound, err := dial(hostPort)
+// 	if err != nil {
+// 		error502Handle(w, req, err)
+// 		return
+// 	}
+
+// 	defer outbound.Close()
+
+// 	if req.ProtoMajor == 1 {
+// 		hijacker, ok := w.(http.Hijacker)
+// 		if !ok {
+// 			error500Handle(w, req, errors.New("hijacker is not supported"))
+// 			return
+// 		}
+
+// 		clientConn, bufReader, err := hijacker.Hijack()
+// 		if err != nil {
+// 			error500Handle(w, req, errors.New("hijacker is not supported"))
+// 			return
+// 		}
+// 		defer clientConn.Close()
+
+// 		if bufReader != nil {
+// 			// snippet borrowed from `proxy` plugin
+// 			if n := bufReader.Reader.Buffered(); n > 0 {
+// 				rbuf, err := bufReader.Reader.Peek(n)
+// 				if err != nil {
+// 					error500Handle(w, req, errors.New("buf read error"))
+// 					return
+// 				}
+// 				outbound.Write(rbuf)
+// 			}
+// 		}
+
+// 		res := &http.Response{StatusCode: http.StatusOK,
+// 			Proto:      "HTTP/1.1",
+// 			ProtoMajor: 1,
+// 			ProtoMinor: 1,
+// 			Header:     make(http.Header),
+// 		}
+// 		res.Header.Set("Server", fakeServer)
+// 		err = res.Write(clientConn)
+// 		if err != nil {
+// 			error500Handle(w, req, errors.New("write to client error"))
+// 			return
+// 		}
+// 		dualStream(outbound, clientConn, clientConn)
+// 	} else if req.ProtoMajor == 2 {
+// 		defer req.Body.Close()
+// 		wFlusher, ok := w.(http.Flusher)
+// 		if !ok {
+// 			error500Handle(w, req, errors.New("ResponseWriter doesn't implement Flusher"))
+// 			return
+// 		}
+// 		w.WriteHeader(http.StatusOK)
+// 		wFlusher.Flush()
+// 		dualStream(outbound, req.Body, w)
+// 		return
+// 	} else {
+// 		error500Handle(w, req, errors.New("HTTP version not supported"))
+// 		return
+// 	}
+// }
+
+func httpsProxyHandle2(w http.ResponseWriter, req *http.Request) {
+
+	// hostPort
 	hostPort := req.URL.Host
-	Port := req.URL.Port()
-	if Port == "" {
+	if hostPort == "" {
+		hostPort = req.Host
+	}
+	_, _, err := net.SplitHostPort(hostPort)
+	if err != nil {
 		if req.URL.Scheme == "http" {
 			hostPort = net.JoinHostPort(hostPort, "80")
 		} else {
@@ -254,24 +333,34 @@ func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	// outbound
 	outbound, err := dial(hostPort)
 	if err != nil {
 		error502Handle(w, req, err)
 		return
 	}
-
 	defer outbound.Close()
 
-	if req.ProtoMajor == 1 {
+	// Return 200
+	wFlusher, ok := w.(http.Flusher)
+	if !ok {
+		error500Handle(w, req, errors.New("Server doesn't implement Flusher"))
+	}
+	responsePadding(w)
+	w.Header().Set("Server", fakeServer)
+	w.WriteHeader(http.StatusOK)
+	wFlusher.Flush()
+
+	switch req.ProtoMajor {
+	case 1:
 		hijacker, ok := w.(http.Hijacker)
 		if !ok {
-			error500Handle(w, req, errors.New("hijacker is not supported"))
+			error500Handle(w, req, errors.New("Server does not implement Hijacker"))
 			return
 		}
-
 		clientConn, bufReader, err := hijacker.Hijack()
 		if err != nil {
-			error500Handle(w, req, errors.New("hijacker is not supported"))
+			error500Handle(w, req, errors.New("failed to hijack: "+err.Error()))
 			return
 		}
 		defer clientConn.Close()
@@ -281,39 +370,17 @@ func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
 			if n := bufReader.Reader.Buffered(); n > 0 {
 				rbuf, err := bufReader.Reader.Peek(n)
 				if err != nil {
-					error500Handle(w, req, errors.New("buf read error"))
+					error500Handle(w, req, err)
 					return
 				}
 				outbound.Write(rbuf)
 			}
 		}
-
-		res := &http.Response{StatusCode: http.StatusOK,
-			Proto:      "HTTP/1.1",
-			ProtoMajor: 1,
-			ProtoMinor: 1,
-			Header:     make(http.Header),
-		}
-		res.Header.Set("Server", fakeServer)
-		err = res.Write(clientConn)
-		if err != nil {
-			error500Handle(w, req, errors.New("write to client error"))
-			return
-		}
 		dualStream(outbound, clientConn, clientConn)
-	} else if req.ProtoMajor == 2 {
+	case 2:
 		defer req.Body.Close()
-		wFlusher, ok := w.(http.Flusher)
-		if !ok {
-			error500Handle(w, req, errors.New("ResponseWriter doesn't implement Flusher"))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		wFlusher.Flush()
 		dualStream(outbound, req.Body, w)
-		return
-	} else {
-		error500Handle(w, req, errors.New("HTTP version not supported"))
-		return
+	default:
+		error500Handle(w, req, errors.New("HTTP protocol verion error"))
 	}
 }
