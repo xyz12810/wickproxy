@@ -28,7 +28,6 @@ const proxyBody = `<html>
 <head><title>Wickproxy Proxy Server</title></head>
 <body bgcolor="white">
 <center><h1>Wickproxy Proxy Server</h1></center>
-<\br>
 <center><p>%v</p></center>
 <hr><center>%v</center>
 </body

@@ -130,11 +130,11 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 
 	// Access Control List check
 	if !aclPrivateCheck(host) {
-		error502Handle(w, req, err)
+		error403Handle(w, req, err)
 		return
 	}
 	if !aclCheck(host, port) {
-		error502Handle(w, req, err)
+		error403Handle(w, req, err)
 		return
 	}
 

@@ -35,7 +35,7 @@ jobs:
         draft: false
         prerelease: false
 
-    - name: Update
+    - name: Upload Assets
       id: upload-release-asset 
       uses: csexton/release-asset-action@v2
       with:
