@@ -37,9 +37,8 @@ jobs:
 
     - name: Update
       id: upload-release-asset 
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      uses: csexton/release-asset-action@v2
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        files: build/wickproxy*
+        github-token: ${{ secrets.TOKEN }}
+        release-url: ${{ steps.create_release.outputs.upload_url }}
+        pattern: "build/wickproxy*"
