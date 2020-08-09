@@ -4,7 +4,7 @@ else
 	builddate = $(shell date +"%Y-%M-%d %H:%M:%S")
 endif
 
-version = v3.1.7-beta
+version = v0.1.7-beta
 ldflags = -X 'main.version=$(version)' -X 'main.builddate=$(builddate)'
 
 build:

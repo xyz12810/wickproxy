@@ -138,6 +138,9 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// start to proxy
+	log.Debugln("[proxy] user["+username+"]", req.Method, host, req.URL)
+
 	// visit secureURL
 	if GlobalConfig.SecureURL != "" && GlobalConfig.SecureURL == host {
 		proxyPassHandle(w, req)
@@ -149,9 +152,6 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 		errorHandle(w, req, http.StatusHTTPVersionNotSupported, errors.New("Unsupported HTTP major version: "+strconv.Itoa(req.ProtoMajor)))
 		return
 	}
-
-	// start to proxy
-	log.Debugln("[proxy] user["+username+"]", req.Method, req.Host, req.URL)
 
 	// For http proxy
 	if req.Method != http.MethodConnect {
