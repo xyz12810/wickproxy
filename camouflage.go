@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -35,7 +34,7 @@ const proxyBody = `<html>
 </html>
 `
 
-var rpHandlerSet map[string]*httputil.ReverseProxy
+var rpHandler *httputil.ReverseProxy
 
 // Error Handlers
 func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int, err error) {
@@ -105,13 +104,12 @@ func proxyPassHandle(w http.ResponseWriter, req *http.Request) {
 }
 
 func reverseProxyHandlerInit() {
-	rpHandlerSet = make(map[string]*httputil.ReverseProxy)
 
 	rpURL, err := url.Parse(GlobalConfig.FallbackURL)
 	if err != nil {
 		log.Fatalln("[fallback] init reverse proxy server error:", err)
 	}
-	rpHandler := httputil.NewSingleHostReverseProxy(rpURL)
+	rpHandler = httputil.NewSingleHostReverseProxy(rpURL)
 	rpHandler.ErrorLog = loggerAdapter
 	rpHandler.Director = func(req *http.Request) {
 		req.URL.Scheme = rpURL.Scheme
@@ -124,8 +122,6 @@ func reverseProxyHandlerInit() {
 		return nil
 	}
 	rpHandler.ErrorHandler = error404Handle
-
-	rpHandlerSet[rpURL.Host] = rpHandler
 }
 
 func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
@@ -134,20 +130,6 @@ func reverseProxyHandler(w http.ResponseWriter, req *http.Request) {
 		host = req.Host
 	}
 
-	log.Debugln("[fallback]", rpHandlerSet, host)
-
-	rpHandler, ok := rpHandlerSet[host]
-	if !ok {
-		l := len(rpHandlerSet)
-		if l == 0 {
-			error404Handle(w, req, errors.New("[fallback] fallback host not found: "+host))
-			return
-		}
-		for _,v := range rpHandlerSet {
-			rpHandler = v
-			break
-		}
-	}
 	rpHandler.ServeHTTP(w, req)
 }
 
