@@ -67,9 +67,8 @@ func serverHandle() {
 		Addr:         server,
 		Handler:      &proxyServer{},
 		ErrorLog:     loggerAdapter,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  75 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
 	if GlobalConfig.TLS.Certificate != "" && GlobalConfig.TLS.CertificateKey != "" {
