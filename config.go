@@ -24,9 +24,9 @@ type aclConfig struct {
 type globalConfig struct {
 	Server string
 
-	SecureURL   string
-	FallbackURL string
-	WhiteListURL string
+	SecureHost   string
+	Fallback string
+	WhiteListHosts string
 
 	Timeout time.Duration
 	Logging string

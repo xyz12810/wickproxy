@@ -1,0 +1,21 @@
+{
+    "Server": "0.0.0.0:443",
+    "SecureURL": "pr.ertuil.fun", 
+    "FallbackURL": "http://127.0.0.1:81",
+    "WhiteListURL": "github.com",
+    "Timeout": 10,
+    "Logging": "",
+    "PID": 0,
+    "TLS": {
+      "Certificate": "xxxx.cer",
+      "CertificateKey": "xxxx.key"
+    },
+    "Users": [
+      {
+        "Username": "user1",
+        "Password": "user1",
+        "Quato": 0
+      }
+    ],
+    "ACL": []
+  }

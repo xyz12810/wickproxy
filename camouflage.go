@@ -8,7 +8,7 @@ import (
 	"net/url"
 )
 
-const fakeServer = "nginx/1.16.0 (Ubuntu)"
+const fakeServer = "nginx/1.14.2 (Ubuntu)"
 
 const fakeBody = `<html>
 <head><title>%v</title></head>
@@ -16,13 +16,7 @@ const fakeBody = `<html>
 <center><h1>%v</h1></center>
 <hr><center>%v</center>
 </body>
-</html>
-<!-- a padding to disable MSIE and Chrome friendly error page -->
-<!-- a padding to disable MSIE and Chrome friendly error page -->
-<!-- a padding to disable MSIE and Chrome friendly error page -->
-<!-- a padding to disable MSIE and Chrome friendly error page -->
-<!-- a padding to disable MSIE and Chrome friendly error page -->
-<!-- a padding to disable MSIE and Chrome friendly error page -->`
+</html>`
 
 const proxyBody = `<html>
 <head><title>Wickproxy Proxy Server</title></head>
@@ -70,7 +64,7 @@ func errorHandle(w http.ResponseWriter, req *http.Request, code int, err error) 
 		code = http.StatusNotFound
 	}
 
-	if GlobalConfig.FallbackURL != "" {
+	if GlobalConfig.Fallback != "" {
 		log.Errorf("[server] error(%v): %v\n", code, err)
 		reverseProxyHandler(w, req)
 		return
@@ -105,7 +99,7 @@ func proxyPassHandle(w http.ResponseWriter, req *http.Request) {
 
 func reverseProxyHandlerInit() {
 
-	rpURL, err := url.Parse(GlobalConfig.FallbackURL)
+	rpURL, err := url.Parse(GlobalConfig.Fallback)
 	if err != nil {
 		log.Fatalln("[fallback] init reverse proxy server error:", err)
 	}
@@ -114,7 +108,7 @@ func reverseProxyHandlerInit() {
 	rpHandler.Director = func(req *http.Request) {
 		req.URL.Scheme = rpURL.Scheme
 		req.URL.Host = rpURL.Host
-		req.Host = rpURL.Host
+		// req.Host = rpURL.Host
 		removeHopByHop(req.Header)
 	}
 	rpHandler.ModifyResponse = func(w *http.Response) error {

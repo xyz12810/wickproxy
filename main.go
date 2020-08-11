@@ -25,7 +25,7 @@ var (
 	showCmd = kingpin.Command("show", "Show the configuration file.")
 
 	setCmd   = kingpin.Command("set", "Change settings in configuration file. Use 'wickproxy help set' to get help.")
-	setKey   = setCmd.Arg("key", "Keywords could be one of `server`, `timeout`, `secure_url`, `fallback_url`, `cert` and `key`.").String()
+	setKey   = setCmd.Arg("key", "Keywords could be one of `server`, `timeout`, `secure_host`,`whitelist_hosts`, `fallback`, `cert` and `key`.").String()
 	setValue = setCmd.Arg("value", "").String()
 
 	userAddCmd      = kingpin.Command("user-add", "Create a new user.")
@@ -200,12 +200,12 @@ func setHandle() {
 			log.Fatalln("[cmd] timeout invalid!", *setKey)
 		}
 		GlobalConfig.Timeout = time.Duration(t)
-	case "secure_url":
-		GlobalConfig.SecureURL = *setValue
-	case "fallback_url":
-		GlobalConfig.FallbackURL = *setValue
-	case "whitelist_url":
-		GlobalConfig.WhiteListURL = *setValue
+	case "secure_host":
+		GlobalConfig.SecureHost = *setValue
+	case "fallback":
+		GlobalConfig.Fallback = *setValue
+	case "whitelist_hosts":
+		GlobalConfig.WhiteListHosts = *setValue
 	case "tls_cert":
 		GlobalConfig.TLS.Certificate = *setValue
 	case "tls_key":

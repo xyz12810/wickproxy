@@ -142,7 +142,7 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 	log.Debugln("[proxy] user["+username+"]", req.Method, host, req.URL)
 
 	// visit secureURL
-	if GlobalConfig.SecureURL != "" && GlobalConfig.SecureURL == host {
+	if GlobalConfig.SecureHost != "" && GlobalConfig.SecureHost == host {
 		proxyPassHandle(w, req)
 		return
 	}
