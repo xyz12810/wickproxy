@@ -64,11 +64,12 @@ func serverHandle() {
 	log.Infoln("[server] listen at:", server)
 
 	currentServer = &http.Server{
-		Addr:         server,
-		Handler:      &proxyServer{},
-		ErrorLog:     loggerAdapter,
+		Addr:              server,
+		Handler:           &proxyServer{},
+		ErrorLog:          loggerAdapter,
 		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		WriteTimeout:      1 * time.Hour,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	if GlobalConfig.TLS.Certificate != "" && GlobalConfig.TLS.CertificateKey != "" {
