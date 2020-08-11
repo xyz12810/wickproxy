@@ -35,7 +35,7 @@ func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int, err err
 	w.Header().Add("server", fakeServer)
 	w.Header().Add("content-type", "text/html")
 
-	log.Errorf("[server] error(%v): %v\n", code, err)
+	log.Debugf("[server] error(%v): %v\n", code, err)
 	statusText := fmt.Sprintf("%v %v", code, http.StatusText(code))
 	fb := fmt.Sprintf(fakeBody, statusText, statusText, fakeServer)
 
@@ -65,7 +65,7 @@ func errorHandle(w http.ResponseWriter, req *http.Request, code int, err error) 
 	}
 
 	if GlobalConfig.Fallback != "" {
-		log.Errorf("[server] error(%v): %v\n", code, err)
+		log.Debugf("[server] error(%v): %v\n", code, err)
 		reverseProxyHandler(w, req)
 		return
 	}
