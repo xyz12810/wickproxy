@@ -24,14 +24,14 @@ var (
 
 	showCmd = kingpin.Command("show", "Show the configuration file.")
 
-	setCmd   = kingpin.Command("set", "Change settings in configuration file.")
+	setCmd   = kingpin.Command("set", "Change settings in configuration file. Use 'wickproxy help set' to get help.")
 	setKey   = setCmd.Arg("key", "Keywords could be one of `server`, `timeout`, `secure_url`, `fallback_url`, `cert` and `key`.").String()
 	setValue = setCmd.Arg("value", "").String()
 
 	userAddCmd      = kingpin.Command("user-add", "Create a new user.")
 	userAddUsername = userAddCmd.Arg("username", "Username.").Required().String()
 	userAddPassword = userAddCmd.Arg("password", "Password.").Required().String()
-	userAddQuota    = userAddCmd.Arg("quota", "Quota ( 0 for no limitation.").Default("0").Int()
+	userAddQuota    = userAddCmd.Arg("quota", "Usage quote (not supported yet). 0 for no limitation.").Default("0").Int()
 	userAddForce    = userAddCmd.Flag("force", "Force to add or update a user.").Short('f').Default("false").Bool()
 
 	userDelCmd      = kingpin.Command("user-del", "Delete user(s).")
@@ -106,7 +106,7 @@ func main() {
 
 	// Read config
 	err := configReader(*configFlag)
-	if err != nil {
+	if err != nil && cmd != initCmd.FullCommand() {
 		log.Fatalln("[cmd] no configuration file found, use `wickproxy init` to create one.")
 	}
 

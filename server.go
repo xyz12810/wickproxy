@@ -58,7 +58,7 @@ func serverHandle() {
 	loggerAdapter = midlog.AsHttpLogger(ent)
 
 	// reverse proxy server init
-	reverseProxyHandler2Init()
+	reverseProxyHandlerInit()
 
 	server := getServer()
 	log.Infoln("[server] listen at:", server)
@@ -155,12 +155,12 @@ func defaultServerHandler(w http.ResponseWriter, req *http.Request) {
 
 	// For http proxy
 	if req.Method != http.MethodConnect {
-		httpProxyHandler2(w, req)
+		httpProxyHandler(w, req)
 		return
 	}
 
 	// For http(s)(2) proxy
-	httpsProxyHandle2(w, req)
+	httpsProxyHandle(w, req)
 	return
 }
 
@@ -182,44 +182,7 @@ func authenticate(w http.ResponseWriter, req *http.Request) (ret, emptyAuth bool
 	return false, false, ""
 }
 
-// handle HTTP Proxy
-// func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
-// 	var err error
-
-// 	// step 1: build request
-// 	transport := http.DefaultTransport
-// 	outReq := new(http.Request)
-// 	outReq = req.Clone(req.Context())
-// 	if outReq.URL.Scheme == "" {
-// 		outReq.URL.Scheme = "http"
-// 	}
-// 	if outReq.URL.Host == "" {
-// 		outReq.URL.Host = outReq.Host
-// 	}
-// 	outReq.Proto = "HTTP/1.1"
-// 	outReq.ProtoMajor = 1
-// 	outReq.ProtoMinor = 1
-// 	removeHopByHop(outReq.Header)
-
-// 	res, err := transport.RoundTrip(outReq)
-// 	if err != nil {
-// 		error500Handle(w, req, err)
-// 		return
-// 	}
-
-// 	removeHopByHop(res.Header)
-// 	for key, value := range res.Header {
-// 		for _, v := range value {
-// 			w.Header().Add(key, v)
-// 		}
-// 	}
-
-// 	w.WriteHeader(res.StatusCode)
-// 	io.Copy(w, res.Body)
-// 	res.Body.Close()
-// }
-
-func httpProxyHandler2(w http.ResponseWriter, req *http.Request) {
+func httpProxyHandler(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Scheme == "" {
 		req.URL.Scheme = "http"
 	}
@@ -242,82 +205,7 @@ func httpProxyHandler2(w http.ResponseWriter, req *http.Request) {
 	tmpRPHandler.ServeHTTP(w, req)
 }
 
-// func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
-// 	hostPort := req.URL.Host
-// 	Port := req.URL.Port()
-// 	if Port == "" {
-// 		if req.URL.Scheme == "http" {
-// 			hostPort = net.JoinHostPort(hostPort, "80")
-// 		} else {
-// 			hostPort = net.JoinHostPort(hostPort, "443")
-// 		}
-// 	}
-
-// 	outbound, err := dial(hostPort)
-// 	if err != nil {
-// 		error502Handle(w, req, err)
-// 		return
-// 	}
-
-// 	defer outbound.Close()
-
-// 	if req.ProtoMajor == 1 {
-// 		hijacker, ok := w.(http.Hijacker)
-// 		if !ok {
-// 			error500Handle(w, req, errors.New("hijacker is not supported"))
-// 			return
-// 		}
-
-// 		clientConn, bufReader, err := hijacker.Hijack()
-// 		if err != nil {
-// 			error500Handle(w, req, errors.New("hijacker is not supported"))
-// 			return
-// 		}
-// 		defer clientConn.Close()
-
-// 		if bufReader != nil {
-// 			// snippet borrowed from `proxy` plugin
-// 			if n := bufReader.Reader.Buffered(); n > 0 {
-// 				rbuf, err := bufReader.Reader.Peek(n)
-// 				if err != nil {
-// 					error500Handle(w, req, errors.New("buf read error"))
-// 					return
-// 				}
-// 				outbound.Write(rbuf)
-// 			}
-// 		}
-
-// 		res := &http.Response{StatusCode: http.StatusOK,
-// 			Proto:      "HTTP/1.1",
-// 			ProtoMajor: 1,
-// 			ProtoMinor: 1,
-// 			Header:     make(http.Header),
-// 		}
-// 		res.Header.Set("Server", fakeServer)
-// 		err = res.Write(clientConn)
-// 		if err != nil {
-// 			error500Handle(w, req, errors.New("write to client error"))
-// 			return
-// 		}
-// 		dualStream(outbound, clientConn, clientConn)
-// 	} else if req.ProtoMajor == 2 {
-// 		defer req.Body.Close()
-// 		wFlusher, ok := w.(http.Flusher)
-// 		if !ok {
-// 			error500Handle(w, req, errors.New("ResponseWriter doesn't implement Flusher"))
-// 			return
-// 		}
-// 		w.WriteHeader(http.StatusOK)
-// 		wFlusher.Flush()
-// 		dualStream(outbound, req.Body, w)
-// 		return
-// 	} else {
-// 		error500Handle(w, req, errors.New("HTTP version not supported"))
-// 		return
-// 	}
-// }
-
-func httpsProxyHandle2(w http.ResponseWriter, req *http.Request) {
+func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
 
 	// hostPort
 	hostPort := req.URL.Host
