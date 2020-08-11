@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
+	"net/url"	
 )
 
 const fakeServer = "nginx/1.14.2 (Ubuntu)"
@@ -29,6 +29,7 @@ const proxyBody = `<html>
 `
 
 var rpHandler *httputil.ReverseProxy
+var rpTransport *http.Transport
 
 // Error Handlers
 func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int, err error) {

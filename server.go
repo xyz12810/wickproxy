@@ -58,6 +58,7 @@ func serverHandle() {
 	loggerAdapter = midlog.AsHttpLogger(ent)
 
 	// reverse proxy server init
+
 	reverseProxyHandlerInit()
 
 	server := getServer()
@@ -67,9 +68,10 @@ func serverHandle() {
 		Addr:              server,
 		Handler:           &proxyServer{},
 		ErrorLog:          loggerAdapter,
-		ReadHeaderTimeout: 10 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      1 * time.Hour,
-		IdleTimeout:       120 * time.Second,
+		IdleTimeout:       75 * time.Second,
 	}
 
 	if GlobalConfig.TLS.Certificate != "" && GlobalConfig.TLS.CertificateKey != "" {
