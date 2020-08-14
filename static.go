@@ -60,7 +60,7 @@ func errorCoreHandle(w http.ResponseWriter, req *http.Request, code int, err err
 		w.Header().Add("Proxy-Authenticate", "Basic realm=\"Wickproxy Secure Proxy\"")
 	}
 	if code == StatusProxySuccess {
-		rawText = rawText + "Authenticate Successfully! Feel free to browser!"
+		rawText = rawText + ". Authenticate Successfully! Feel free to browse!"
 		code = http.StatusOK
 	}
 
