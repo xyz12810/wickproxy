@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/improbable-eng/go-httpwares/logging/logrus"
+	http_logrus "github.com/improbable-eng/go-httpwares/logging/logrus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -236,10 +236,6 @@ func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
 	if !ok {
 		error500Handle(w, req, errors.New("Server doesn't implement Flusher"))
 	}
-	responsePadding(w)
-	w.Header().Set("Server", fakeServer)
-	w.WriteHeader(http.StatusOK)
-	wFlusher.Flush()
 
 	switch req.ProtoMajor {
 	case 1:
@@ -266,9 +262,21 @@ func httpsProxyHandle(w http.ResponseWriter, req *http.Request) {
 				outbound.Write(rbuf)
 			}
 		}
+
+		res := &http.Response{StatusCode: http.StatusOK,
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header:     make(http.Header),
+		}
+		res.Header.Set("Server", nameStr)
+		res.Write(clientConn)
+
 		dualStream(outbound, clientConn, clientConn)
 	case 2:
 		defer req.Body.Close()
+		proxy200Handle(w, req)
+		wFlusher.Flush()
 		dualStream(outbound, req.Body, w)
 	default:
 		error500Handle(w, req, errors.New("HTTP protocol verion error"))

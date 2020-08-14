@@ -95,7 +95,6 @@ func serveHijack(w http.ResponseWriter, targetConn net.Conn) (int, error) {
 		ProtoMinor: 1,
 		Header:     make(http.Header),
 	}
-	res.Header.Set("Server", fakeServer)
 
 	err = res.Write(clientConn)
 	if err != nil {

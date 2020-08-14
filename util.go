@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"math/rand"
 	"net/http"
 	"strings"
 )
@@ -74,4 +75,20 @@ func checkWhiteList(host string) (ret bool) {
 		}
 	}
 	return false
+}
+
+// Fork from klzgrad/forwardprox
+func responsePadding(w http.ResponseWriter) {
+	paddingLen := rand.Intn(32) + 30
+	padding := make([]byte, paddingLen)
+	bits := rand.Uint64()
+	for i := 0; i < 16; i++ {
+		// Codes that won't be Huffman coded.
+		padding[i] = "!#$()+<>?@[]^`{}"[bits&15]
+		bits >>= 4
+	}
+	for i := 16; i < paddingLen; i++ {
+		padding[i] = '~'
+	}
+	w.Header().Set("Padding", string(padding))
 }
