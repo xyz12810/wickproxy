@@ -8,7 +8,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
 	github.com/improbable-eng/go-httpwares v0.0.0-20200609095714-edc8019f93cc
 	github.com/sirupsen/logrus v1.6.0
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
+	//golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	logur.dev/adapter/logrus v0.5.0
+	// logur.dev/adapter/logrus v0.5.0	
 )

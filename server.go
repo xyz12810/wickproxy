@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	oldlog "log"
+	pkglog "log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	midlog "github.com/improbable-eng/go-httpwares/logging/logrus"
+	"github.com/improbable-eng/go-httpwares/logging/logrus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,7 +18,7 @@ const defaultServer = "0.0.0.0:7890"
 
 var (
 	currentServer *http.Server
-	loggerAdapter *oldlog.Logger
+	loggerAdapter *pkglog.Logger
 )
 
 type proxyServer struct{}
@@ -55,7 +55,7 @@ func serverHandle() {
 
 	//logger adapter initial
 	ent := logrus.NewEntry(log)
-	loggerAdapter = midlog.AsHttpLogger(ent)
+	loggerAdapter = http_logrus.AsHttpLogger(ent)
 
 	// reverse proxy server init
 
